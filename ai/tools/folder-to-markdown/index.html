@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Folder to Markdown</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #bb86fc;
+            --secondary-color: #03dac6;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border-color: #333;
+            --input-bg: #2c2c2c;
+            --danger-color: #cf6679;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--surface-color);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; }
+
+        button {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button:hover { background-color: #383838; }
+        button:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #000;
+            font-weight: bold;
+            border: none;
+        }
+        .btn-primary:hover { background-color: #9965f4; }
+
+        .action-area {
+            text-align: center;
+            padding: 40px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* Hide the actual file input */
+        #folderInput { display: none; }
+
+        #status {
+            margin-top: 15px;
+            font-style: italic;
+            color: var(--text-muted);
+            min-height: 20px;
+        }
+
+        #resultArea {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        textarea {
+            width: 100%;
+            height: 400px;
+            background-color: var(--input-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal {
+            background: var(--surface-color);
+            padding: 25px;
+            border-radius: 10px;
+            width: 500px;
+            max-width: 90%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .modal-body label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+        }
+
+        .modal-textarea {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 15px;
+            font-family: monospace;
+        }
+
+        .modal-footer {
+            text-align: right;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Folder 2 Markdown</h1>
+        <button id="btnSettings">⚙️ Settings / Ignores</button>
+    </header>
+
+    <div class="action-area">
+        <button class="btn-primary" onclick="document.getElementById('folderInput').click()">📂 Select Folder</button>
+        <input type="file" id="folderInput" webkitdirectory multiple>
+        <div id="status">Ready to process</div>
+    </div>
+
+    <div id="resultArea">
+        <div class="result-actions">
+            <button id="btnCopy">📋 Copy to Clipboard</button>
+            <button id="btnDownload">💾 Download .md</button>
+        </div>
+        <textarea id="outputPreview" readonly></textarea>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Ignore Patterns</h3>
+            <button onclick="closeModal()" style="padding: 5px 10px;">✕</button>
+        </div>
+        <div class="modal-body">
+            <label>Enter patterns to ignore (one per line). Supports wildcards (*).</label>
+            <textarea id="ignorePatterns" class="modal-textarea"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button onclick="saveSettings()" class="btn-primary">Save & Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- State & Config ---
+    const defaultIgnores = [
+        ".git",
+        ".svn",
+        ".DS_Store",
+        "node_modules",
+        "dist",
+        "build",
+        "vendor",
+        ".env",
+        "__pycache__",
+        "*.lock",
+        "*.png",
+        "*.jpg",
+        "*.jpeg",
+        "*.gif",
+        "*.svg",
+        "*.ico",
+        "*.pdf",
+        "*.exe",
+        "*.bin",
+        "*.dll",
+        "*.so",
+        "*.dylib",
+        "*.zip",
+        "*.tar",
+        "*.gz"
+    ];
+
+    // --- DOM Elements ---
+    const fileInput = document.getElementById('folderInput');
+    const statusDiv = document.getElementById('status');
+    const resultArea = document.getElementById('resultArea');
+    const outputPreview = document.getElementById('outputPreview');
+    const modal = document.getElementById('settingsModal');
+    const ignoreInput = document.getElementById('ignorePatterns');
+
+    // --- Initialization ---
+    window.addEventListener('DOMContentLoaded', () => {
+        const saved = localStorage.getItem('f2md_ignores');
+        if (saved) {
+            ignoreInput.value = saved;
+        } else {
+            ignoreInput.value = defaultIgnores.join('\n');
+        }
+    });
+
+    // --- Event Listeners ---
+    document.getElementById('btnSettings').addEventListener('click', () => {
+        modal.style.display = 'flex';
+    });
+
+    document.getElementById('btnCopy').addEventListener('click', async () => {
+        if (!outputPreview.value) return;
+        try {
+            await navigator.clipboard.writeText(outputPreview.value);
+            const originalText = document.getElementById('btnCopy').innerText;
+            document.getElementById('btnCopy').innerText = "✅ Copied!";
+            setTimeout(() => document.getElementById('btnCopy').innerText = originalText, 2000);
+        } catch (err) {
+            alert('Failed to copy');
+        }
+    });
+
+    document.getElementById('btnDownload').addEventListener('click', () => {
+        if (!outputPreview.value) return;
+        const blob = new Blob([outputPreview.value], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'project_context.md';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        statusDiv.innerText = `Found ${files.length} files. Processing...`;
+        resultArea.style.display = 'none';
+
+        // 1. Get Ignore Regex List
+        const ignorePatterns = getIgnoreRegexes();
+
+        // 2. Filter Files
+        const allowedFiles = files.filter(file => {
+            const path = file.webkitRelativePath || file.name;
+            return !shouldIgnore(path, ignorePatterns);
+        });
+
+        // 3. Sort Files alphabetically
+        allowedFiles.sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name));
+
+        if (allowedFiles.length === 0) {
+            statusDiv.innerText = "All files were filtered out by ignore patterns.";
+            return;
+        }
+
+        // 4. Generate Tree
+        const treeString = generateTree(allowedFiles);
+
+        // 5. Generate Content
+        let contentString = "";
+        let processedCount = 0;
+
+        for (const file of allowedFiles) {
+            const path = file.webkitRelativePath || file.name;
+            statusDiv.innerText = `Reading (${++processedCount}/${allowedFiles.length}): ${path}`;
+            
+            try {
+                const content = await readFileContent(file);
+                // Check if it looks binary (has null characters or is very weird)
+                if (isBinary(content)) {
+                    contentString += `\n### 📄 ${path}\n\n> [Binary file skipped]\n`;
+                } else {
+                    const ext = path.split('.').pop() || 'txt';
+                    contentString += `\n### 📄 ${path}\n\n\`\`\`${ext}\n${content}\n\`\`\`\n`;
+                }
+            } catch (err) {
+                contentString += `\n### 📄 ${path}\n\n> [Error reading file]\n`;
+            }
+        }
+
+        // 6. Final Combine
+        const finalOutput = `# Project Structure\n\n\`\`\`\n${treeString}\`\`\`\n\n# File Contents\n${contentString}`;
+        
+        outputPreview.value = finalOutput;
+        statusDiv.innerText = "Done!";
+        resultArea.style.display = 'flex';
+    });
+
+    // --- Helper Functions ---
+
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    function saveSettings() {
+        localStorage.setItem('f2md_ignores', ignoreInput.value);
+        closeModal();
+    }
+
+    function getIgnoreRegexes() {
+        const raw = ignoreInput.value.split('\n');
+        return raw.filter(line => line.trim() !== '').map(pattern => {
+            pattern = pattern.trim();
+            // Escape special regex chars except *
+            let safe = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+            // Convert wildcard * to regex .*
+            safe = safe.replace(/\*/g, '.*');
+            return new RegExp(safe, 'i'); // case insensitive
+        });
+    }
+
+    function shouldIgnore(path, regexes) {
+        // Check parts of the path for node_modules etc
+        const parts = path.split('/');
+        
+        // Check full path against regexes
+        for (let reg of regexes) {
+            if (reg.test(path)) return true;
+            // Also check individual segments (like "node_modules")
+            for(let part of parts) {
+                if(reg.test(part)) return true;
+            }
+        }
+        return false;
+    }
+
+    function readFileContent(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(e);
+            reader.readAsText(file);
+        });
+    }
+
+    // Simple heuristic to check for binary content (null bytes)
+    function isBinary(str) {
+        // Check for null bytes in the first 1000 chars
+        for (let i = 0; i < Math.min(1000, str.length); i++) {
+            if (str.charCodeAt(i) === 0) return true;
+        }
+        return false;
+    }
+
+    function generateTree(files) {
+        const paths = files.map(f => f.webkitRelativePath || f.name);
+        const root = {};
+
+        // Build object tree
+        paths.forEach(path => {
+            const parts = path.split('/');
+            let current = root;
+            parts.forEach((part, index) => {
+                if (!current[part]) {
+                    current[part] = index === parts.length - 1 ? null : {};
+                }
+                current = current[part];
+            });
+        });
+
+        // Render string
+        let output = "";
+        
+        function traverse(node, prefix = "", isLast = true) {
+            const keys = Object.keys(node);
+            keys.forEach((key, index) => {
+                const isKeyLast = index === keys.length - 1;
+                const connector = isKeyLast ? "└── " : "├── ";
+                output += prefix + connector + key + "\n";
+                
+                if (node[key] !== null) {
+                    const childPrefix = prefix + (isKeyLast ? "    " : "│   ");
+                    traverse(node[key], childPrefix, isKeyLast);
+                }
+            });
+        }
+
+        // Determine root name
+        const rootKey = Object.keys(root)[0];
+        output += rootKey + "/\n";
+        if(root[rootKey]) {
+            traverse(root[rootKey]);
+        }
+        
+        return output;
+    }
+
+</script>
+</body>
+</html>
