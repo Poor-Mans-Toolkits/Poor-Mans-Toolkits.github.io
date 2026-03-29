@@ -3,19 +3,7 @@
  * Wires together all modules and handles UI interactions
  */
 
-const {
-    parseSubtitle,
-    generateSubtitle,
-    createPreview,
-    formatFileSize,
-    createBatches,
-    getBatchStats,
-    createProgressTracker,
-    translateAllBatches,
-    setModel,
-    getModel,
-    validateApiKey
-} = window.ST;
+const ST = window.ST;
 
 // ============================================
 // State Management
@@ -319,10 +307,10 @@ function hideProgress() {
 
 function showPreview() {
     if (state.parsedSubtitle) {
-        elements.originalPreview.textContent = createPreview(state.parsedSubtitle.entries, 15);
+        elements.originalPreview.textContent = ST.createPreview(state.parsedSubtitle.entries, 15);
     }
     if (state.translatedSubtitle) {
-        elements.translatedPreview.textContent = createPreview(state.translatedSubtitle.entries, 15);
+        elements.translatedPreview.textContent = ST.createPreview(state.translatedSubtitle.entries, 15);
     }
     elements.previewCard.hidden = false;
 }
@@ -364,7 +352,7 @@ function updateApiKeyIndicator() {
     elements.apiKeyStatus.classList.toggle('active', hasKey);
 }
 
-async function handleValidateKey() {
+function handleSaveApiKey() {
     const key = elements.modalApiKey.value.trim();
     if (!key) {
         elements.modalStatus.textContent = 'Please enter an API key.';
@@ -373,26 +361,14 @@ async function handleValidateKey() {
         return;
     }
 
-    elements.validateKeyBtn.disabled = true;
-    elements.modalStatus.textContent = 'Validating...';
-    elements.modalStatus.className = 'modal-status';
+    state.apiKey = key;
+    saveApiKey(key);
+    updateApiKeyIndicator();
+    updateTranslateButton();
+    elements.modalStatus.textContent = 'Saved locally in your browser.';
+    elements.modalStatus.className = 'modal-status success';
     elements.modalStatus.hidden = false;
-
-    const isValid = await validateApiKey(key);
-
-    if (isValid) {
-        state.apiKey = key;
-        saveApiKey(key);
-        updateApiKeyIndicator();
-        updateTranslateButton();
-        elements.modalStatus.textContent = 'Key is valid!';
-        elements.modalStatus.className = 'modal-status success';
-        setTimeout(hideApiKeyModal, 800);
-    } else {
-        elements.modalStatus.textContent = 'Invalid API key. Please check and try again.';
-        elements.modalStatus.className = 'modal-status error';
-        elements.validateKeyBtn.disabled = false;
-    }
+    setTimeout(hideApiKeyModal, 600);
 }
 
 // ============================================
@@ -417,7 +393,7 @@ function handleFile(file) {
         const content = e.target.result;
 
         try {
-            const parsed = parseSubtitle(content);
+            const parsed = ST.parseSubtitle(content);
 
             if (parsed.entries.length === 0) {
                 showToast('No valid subtitles found in the file.');
@@ -432,7 +408,7 @@ function handleFile(file) {
 
             // Update UI
             elements.fileName.textContent = file.name;
-            elements.fileSize.textContent = `${formatFileSize(file.size)} • ${parsed.entries.length} subtitles • ${parsed.format.toUpperCase()}`;
+            elements.fileSize.textContent = `${ST.formatFileSize(file.size)} • ${parsed.entries.length} subtitles • ${parsed.format.toUpperCase()}`;
             elements.dropzone.hidden = true;
             elements.fileInfo.hidden = false;
 
@@ -487,11 +463,11 @@ async function startTranslation(resumeData = null) {
     const selectedModel = elements.modelSelect.value;
 
     // Set the model
-    setModel(selectedModel);
+    ST.setModel(selectedModel);
 
     // Create batches
-    const batches = createBatches(state.parsedSubtitle.entries, batchSize);
-    const stats = getBatchStats(batches);
+    const batches = ST.createBatches(state.parsedSubtitle.entries, batchSize);
+    const stats = ST.getBatchStats(batches);
 
     // Resume settings
     let startFromBatch = 0;
@@ -528,7 +504,7 @@ async function startTranslation(resumeData = null) {
 
     try {
         // Translate all batches
-        const translatedEntries = await translateAllBatches(
+        const translatedEntries = await ST.translateAllBatches(
             state.apiKey,
             batches,
             targetLang,
@@ -691,7 +667,7 @@ function hideResumeBanner() {
 function downloadTranslation() {
     if (!state.translatedSubtitle) return;
 
-    const content = generateSubtitle(state.translatedSubtitle);
+    const content = ST.generateSubtitle(state.translatedSubtitle);
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
 
     // Create filename
@@ -777,14 +753,14 @@ function setupEventListeners() {
     });
 
     // API Key Modal
-    elements.validateKeyBtn.addEventListener('click', handleValidateKey);
+    elements.validateKeyBtn.addEventListener('click', handleSaveApiKey);
     elements.skipKeyBtn.addEventListener('click', hideApiKeyModal);
     elements.toggleModalApiKey.addEventListener('click', () => {
         const input = elements.modalApiKey;
         input.type = input.type === 'password' ? 'text' : 'password';
     });
     elements.modalApiKey.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') handleValidateKey();
+        if (e.key === 'Enter') handleSaveApiKey();
     });
     elements.apiKeyModal.addEventListener('click', (e) => {
         if (e.target === elements.apiKeyModal) hideApiKeyModal();

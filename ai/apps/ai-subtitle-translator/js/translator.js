@@ -3,7 +3,7 @@
  * Handles communication with Google Gemini API for translations
  */
 
-const { formatEntriesForAPI, formatContextForAPI, parseAPIResponse } = window.ST;
+/** Use `window.ST.*` for batcher helpers — destructuring would redeclare globals like `formatEntriesForAPI`. */
 
 /**
  * Gemini API configuration
@@ -66,7 +66,7 @@ CRITICAL RULES:
 
     // Add context if available
     if (contextEntries.length > 0) {
-        const contextStr = formatContextForAPI(contextEntries, translatedContext);
+        const contextStr = window.ST.formatContextForAPI(contextEntries, translatedContext);
         prompt += `PREVIOUS CONTEXT (for consistency):
 ${contextStr}
 
@@ -74,7 +74,7 @@ ${contextStr}
     }
 
     prompt += `SUBTITLES TO TRANSLATE:
-${formatEntriesForAPI(entries)}
+${window.ST.formatEntriesForAPI(entries)}
 
 TRANSLATED SUBTITLES (in ${langName}):`;
 
@@ -227,7 +227,7 @@ async function translateBatch(apiKey, batch, targetLang, translatedContext = [])
     const response = await callGeminiAPI(apiKey, prompt);
 
     // Parse the response back to entries
-    const translatedEntries = parseAPIResponse(response, batch.entries);
+    const translatedEntries = window.ST.parseAPIResponse(response, batch.entries);
 
     return translatedEntries;
 }
@@ -411,42 +411,6 @@ async function translateAllBatches(apiKey, batches, targetLang, onProgress, sign
 }
 
 /**
- * Validate API key by making a simple test request
- * @param {string} apiKey - API key to validate
- * @returns {Promise<boolean>} True if valid
- */
-async function validateApiKey(apiKey) {
-    if (!apiKey || apiKey.trim().length === 0) {
-        return false;
-    }
-
-    try {
-        const url = `${GEMINI_API_BASE}/${currentModel}:generateContent?key=${apiKey}`;
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: 'Say "OK" if you receive this.'
-                    }]
-                }],
-                generationConfig: {
-                    maxOutputTokens: 10
-                }
-            })
-        });
-
-        return response.ok;
-    } catch {
-        return false;
-    }
-}
-
-/**
  * Delay helper
  * @param {number} ms - Milliseconds to delay
  * @returns {Promise<void>}
@@ -461,7 +425,6 @@ function delay(ms) {
         setModel,
         getModel,
         translateBatch,
-        translateAllBatches,
-        validateApiKey
+        translateAllBatches
     });
 })(typeof globalThis !== 'undefined' ? globalThis : window);

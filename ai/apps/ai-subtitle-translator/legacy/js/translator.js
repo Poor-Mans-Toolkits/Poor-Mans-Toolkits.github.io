@@ -417,42 +417,6 @@ export async function translateAllBatches(apiKey, batches, targetLang, onProgres
 }
 
 /**
- * Validate API key by making a simple test request
- * @param {string} apiKey - API key to validate
- * @returns {Promise<boolean>} True if valid
- */
-export async function validateApiKey(apiKey) {
-    if (!apiKey || apiKey.trim().length === 0) {
-        return false;
-    }
-
-    try {
-        const url = `${GEMINI_API_BASE}/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: 'Say "OK" if you receive this.'
-                    }]
-                }],
-                generationConfig: {
-                    maxOutputTokens: 10
-                }
-            })
-        });
-
-        return response.ok;
-    } catch {
-        return false;
-    }
-}
-
-/**
  * Delay helper
  * @param {number} ms - Milliseconds to delay
  * @returns {Promise<void>}
