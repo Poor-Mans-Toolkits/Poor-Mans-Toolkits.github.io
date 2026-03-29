@@ -3,9 +3,19 @@
  * Wires together all modules and handles UI interactions
  */
 
-import { parseSubtitle, generateSubtitle, createPreview, formatFileSize } from './parser.js';
-import { createBatches, getBatchStats, createProgressTracker } from './batcher.js';
-import { translateAllBatches, setModel, getModel } from './translator.js';
+const {
+    parseSubtitle,
+    generateSubtitle,
+    createPreview,
+    formatFileSize,
+    createBatches,
+    getBatchStats,
+    createProgressTracker,
+    translateAllBatches,
+    setModel,
+    getModel,
+    validateApiKey
+} = window.ST;
 
 // ============================================
 // State Management
@@ -27,9 +37,9 @@ const state = {
 // ============================================
 
 const elements = {
-    // API Key
-    apiKeyInput: document.getElementById('apiKey'),
-    toggleApiKey: document.getElementById('toggleApiKey'),
+    // API Key (header indicator)
+    apiKeyStatus: document.getElementById('apiKeyStatus'),
+    apiKeyLabel: document.getElementById('apiKeyLabel'),
 
     // File Upload
     dropzone: document.getElementById('dropzone'),
@@ -74,7 +84,17 @@ const elements = {
     // Toast
     toast: document.getElementById('toast'),
     toastMessage: document.getElementById('toastMessage'),
-    toastClose: document.getElementById('toastClose')
+    toastClose: document.getElementById('toastClose'),
+
+    // API Key Modal
+    apiKeyModal: document.getElementById('apiKeyModal'),
+    modalApiKey: document.getElementById('modalApiKey'),
+    toggleModalApiKey: document.getElementById('toggleModalApiKey'),
+    modalStatus: document.getElementById('modalStatus'),
+    validateKeyBtn: document.getElementById('validateKeyBtn'),
+    skipKeyBtn: document.getElementById('skipKeyBtn'),
+
+    themeToggle: document.getElementById('themeToggle')
 };
 
 // ============================================
@@ -83,6 +103,35 @@ const elements = {
 
 const STORAGE_KEY = 'subtranslator_apikey';
 const PROGRESS_KEY = 'subtranslator_progress';
+const THEME_KEY = 'subtranslator_theme';
+
+function getStoredTheme() {
+    try {
+        const t = localStorage.getItem(THEME_KEY);
+        if (t === 'light' || t === 'dark') return t;
+    } catch (e) { /* ignore */ }
+    return 'dark';
+}
+
+function applyTheme(theme) {
+    const next = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try {
+        localStorage.setItem(THEME_KEY, next);
+    } catch (e) {
+        console.warn('Could not save theme preference');
+    }
+    const toggle = document.getElementById('themeToggle');
+    if (toggle) {
+        toggle.setAttribute('aria-pressed', next === 'light' ? 'true' : 'false');
+        toggle.title = next === 'light' ? 'Switch to dark theme' : 'Switch to hand-drawn light theme';
+    }
+}
+
+function toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    applyTheme(cur === 'light' ? 'dark' : 'light');
+}
 
 function saveApiKey(key) {
     try {
@@ -232,10 +281,8 @@ function showLog() {
 // ============================================
 
 function updateTranslateButton() {
-    const hasApiKey = state.apiKey.trim().length > 0;
     const hasFile = state.parsedSubtitle !== null;
-
-    elements.translateBtn.disabled = !hasApiKey || !hasFile || state.isTranslating;
+    elements.translateBtn.disabled = !hasFile || state.isTranslating;
 }
 
 function setTranslating(translating) {
@@ -244,7 +291,6 @@ function setTranslating(translating) {
     updateTranslateButton();
 
     // Disable/enable inputs during translation
-    elements.apiKeyInput.disabled = translating;
     elements.targetLang.disabled = translating;
     elements.batchSize.disabled = translating;
     elements.modelSelect.disabled = translating;
@@ -265,7 +311,6 @@ function updateProgress(completedBatches, totalBatches, completedEntries, totalE
 
 function showProgress() {
     elements.progressCard.hidden = false;
-    elements.progressCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function hideProgress() {
@@ -288,7 +333,6 @@ function showDownload() {
         elements.downloadStats.textContent = `${totalEntries} subtitles translated successfully`;
     }
     elements.downloadCard.hidden = false;
-    elements.downloadCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function resetUI() {
@@ -296,6 +340,59 @@ function resetUI() {
     elements.previewCard.hidden = true;
     elements.downloadCard.hidden = true;
     state.translatedSubtitle = null;
+}
+
+// ============================================
+// API Key Modal
+// ============================================
+
+function showApiKeyModal() {
+    elements.modalApiKey.value = '';
+    elements.modalStatus.hidden = true;
+    elements.modalStatus.className = 'modal-status';
+    elements.validateKeyBtn.disabled = false;
+    elements.apiKeyModal.classList.add('visible');
+}
+
+function hideApiKeyModal() {
+    elements.apiKeyModal.classList.remove('visible');
+}
+
+function updateApiKeyIndicator() {
+    const hasKey = state.apiKey.trim().length > 0;
+    elements.apiKeyLabel.textContent = hasKey ? 'API KEY SET' : 'NO API KEY';
+    elements.apiKeyStatus.classList.toggle('active', hasKey);
+}
+
+async function handleValidateKey() {
+    const key = elements.modalApiKey.value.trim();
+    if (!key) {
+        elements.modalStatus.textContent = 'Please enter an API key.';
+        elements.modalStatus.className = 'modal-status error';
+        elements.modalStatus.hidden = false;
+        return;
+    }
+
+    elements.validateKeyBtn.disabled = true;
+    elements.modalStatus.textContent = 'Validating...';
+    elements.modalStatus.className = 'modal-status';
+    elements.modalStatus.hidden = false;
+
+    const isValid = await validateApiKey(key);
+
+    if (isValid) {
+        state.apiKey = key;
+        saveApiKey(key);
+        updateApiKeyIndicator();
+        updateTranslateButton();
+        elements.modalStatus.textContent = 'Key is valid!';
+        elements.modalStatus.className = 'modal-status success';
+        setTimeout(hideApiKeyModal, 800);
+    } else {
+        elements.modalStatus.textContent = 'Invalid API key. Please check and try again.';
+        elements.modalStatus.className = 'modal-status error';
+        elements.validateKeyBtn.disabled = false;
+    }
 }
 
 // ============================================
@@ -386,7 +483,7 @@ async function startTranslation(resumeData = null) {
     if (!state.parsedSubtitle || !state.apiKey) return;
 
     const targetLang = elements.targetLang.value;
-    const batchSize = parseInt(elements.batchSize.value, 10);
+    const batchSize = parseInt(elements.batchSize.value, 10) || 100;
     const selectedModel = elements.modelSelect.value;
 
     // Set the model
@@ -634,17 +731,8 @@ function switchPreviewTab(tab) {
 // ============================================
 
 function setupEventListeners() {
-    // API Key
-    elements.apiKeyInput.addEventListener('input', (e) => {
-        state.apiKey = e.target.value;
-        saveApiKey(state.apiKey);
-        updateTranslateButton();
-    });
-
-    elements.toggleApiKey.addEventListener('click', () => {
-        const input = elements.apiKeyInput;
-        input.type = input.type === 'password' ? 'text' : 'password';
-    });
+    // API Key header button
+    elements.apiKeyStatus.addEventListener('click', showApiKeyModal);
 
     // File Upload - Dropzone
     elements.dropzone.addEventListener('click', () => {
@@ -679,8 +767,32 @@ function setupEventListeners() {
 
     elements.removeFile.addEventListener('click', removeFile);
 
-    // Translate
-    elements.translateBtn.addEventListener('click', startTranslation);
+    // Translate (show modal if no key)
+    elements.translateBtn.addEventListener('click', () => {
+        if (!state.apiKey.trim()) {
+            showApiKeyModal();
+            return;
+        }
+        startTranslation();
+    });
+
+    // API Key Modal
+    elements.validateKeyBtn.addEventListener('click', handleValidateKey);
+    elements.skipKeyBtn.addEventListener('click', hideApiKeyModal);
+    elements.toggleModalApiKey.addEventListener('click', () => {
+        const input = elements.modalApiKey;
+        input.type = input.type === 'password' ? 'text' : 'password';
+    });
+    elements.modalApiKey.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleValidateKey();
+    });
+    elements.apiKeyModal.addEventListener('click', (e) => {
+        if (e.target === elements.apiKeyModal) hideApiKeyModal();
+    });
+
+    if (elements.themeToggle) {
+        elements.themeToggle.addEventListener('click', toggleTheme);
+    }
 
     // Preview Tabs
     elements.tabBtns.forEach(btn => {
@@ -700,9 +812,12 @@ function setupEventListeners() {
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        // Escape to cancel translation
-        if (e.key === 'Escape' && state.isTranslating && state.abortController) {
-            state.abortController.abort();
+        if (e.key === 'Escape') {
+            if (elements.apiKeyModal.classList.contains('visible')) {
+                hideApiKeyModal();
+            } else if (state.isTranslating && state.abortController) {
+                state.abortController.abort();
+            }
         }
     });
 }
@@ -712,17 +827,22 @@ function setupEventListeners() {
 // ============================================
 
 function init() {
+    applyTheme(getStoredTheme());
+
     // Load saved API key
     state.apiKey = loadApiKey();
-    if (state.apiKey) {
-        elements.apiKeyInput.value = state.apiKey;
-    }
 
     // Setup event listeners
     setupEventListeners();
 
-    // Initial button state
+    // Initial UI state
+    updateApiKeyIndicator();
     updateTranslateButton();
+
+    // Show API key modal if no key is saved
+    if (!state.apiKey) {
+        showApiKeyModal();
+    }
 
     console.log('SubTranslator initialized');
 }

@@ -1,6 +1,6 @@
 # SubTranslator
 
-AI-powered subtitle translator using Google Gemini 2.0 Flash. Translate your SRT and VTT subtitle files to multiple languages with just a few clicks.
+AI-powered subtitle translator using Google Gemini (default: Gemini 3 Flash preview). Translate your SRT and VTT subtitle files to multiple languages with just a few clicks.
 
 ![SubTranslator Interface](https://img.shields.io/badge/Made%20with-Gemini%20AI-blue)
 
@@ -27,39 +27,16 @@ AI-powered subtitle translator using Google Gemini 2.0 Flash. Translate your SRT
 
 ### 2. Run the Application
 
-Since this is a client-side web application, you need to serve it through a local web server (required for ES modules).
+This app uses plain scripts (no ES module imports), so you can:
 
-#### Option A: Using Python (recommended)
+- **Open `index.html` directly** in the browser (`file://`) for local use.
+- **Deploy on GitHub Pages** or any static host and open the published URL (recommended for sharing).
 
-```bash
-# Python 3
-python -m http.server 8000
-
-# Or Python 2
-python -m SimpleHTTPServer 8000
-```
-
-Then open http://localhost:8000 in your browser.
-
-#### Option B: Using Node.js
-
-```bash
-# Install serve globally
-npm install -g serve
-
-# Run the server
-serve .
-```
-
-#### Option C: Using VS Code Live Server
-
-1. Install the "Live Server" extension in VS Code
-2. Right-click on `index.html`
-3. Select "Open with Live Server"
+Optional local servers still work if you prefer them (e.g. VS Code Live Server, `npx serve`, or `python -m http.server`).
 
 ### 3. Translate Subtitles
 
-1. Enter your Gemini API key (it will be saved locally)
+1. Add your Gemini API key in the popup or via the header key button (it is saved in the browser)
 2. Drag and drop your subtitle file (SRT or VTT)
 3. Select your target language
 4. Click "Translate Subtitles"
@@ -71,9 +48,8 @@ serve .
 
 The batch size determines how many subtitles are sent to the API in each request:
 
-- **25**: More API calls, but faster responses
-- **50** (default): Good balance of speed and quality
-- **75-100**: Fewer API calls, better context for translation
+- **100** (default): Recommended balance of speed and reliability
+- **200**: Fewer API calls, higher risk of timeouts or truncated responses
 
 ### Supported Languages
 
@@ -117,7 +93,7 @@ sub-translator/
 
 ### API Usage
 
-The app uses the Gemini 2.0 Flash model via REST API. Each batch typically uses:
+The app calls the Gemini REST API (default model: `gemini-3-flash-preview`). Each batch typically uses:
 - ~100-500 input tokens (depending on subtitle length)
 - ~100-500 output tokens
 

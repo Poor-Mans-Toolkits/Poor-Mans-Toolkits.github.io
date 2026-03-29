@@ -28,7 +28,7 @@
  * Default batch configuration
  * Conservative settings for optimal translation quality
  */
-export const DEFAULT_CONFIG = {
+const DEFAULT_CONFIG = {
     maxEntriesPerBatch: 50,
     contextOverlap: 3
 };
@@ -39,7 +39,7 @@ export const DEFAULT_CONFIG = {
  * @param {string} text - Text to estimate tokens for
  * @returns {number} Estimated token count
  */
-export function estimateTokens(text) {
+function estimateTokens(text) {
     // More conservative estimate for multilingual content
     return Math.ceil(text.length / 3);
 }
@@ -49,7 +49,7 @@ export function estimateTokens(text) {
  * @param {SubtitleEntry[]} entries - Entries to calculate tokens for
  * @returns {number} Estimated token count
  */
-export function calculateBatchTokens(entries) {
+function calculateBatchTokens(entries) {
     let total = 0;
     for (const entry of entries) {
         // Include timestamp and text
@@ -66,7 +66,7 @@ export function calculateBatchTokens(entries) {
  * @param {number} batchSize - Number of entries per batch
  * @returns {Batch[]} Array of batch objects
  */
-export function createBatches(entries, batchSize = DEFAULT_CONFIG.maxEntriesPerBatch) {
+function createBatches(entries, batchSize = DEFAULT_CONFIG.maxEntriesPerBatch) {
     const batches = [];
     const totalEntries = entries.length;
     
@@ -75,7 +75,7 @@ export function createBatches(entries, batchSize = DEFAULT_CONFIG.maxEntriesPerB
     }
     
     // Ensure batch size is within reasonable bounds
-    const actualBatchSize = Math.max(10, Math.min(batchSize, 100));
+    const actualBatchSize = Math.max(10, Math.min(batchSize, 500));
     
     let currentIndex = 0;
     let batchIndex = 0;
@@ -113,7 +113,7 @@ export function createBatches(entries, batchSize = DEFAULT_CONFIG.maxEntriesPerB
  * @param {Batch[]} batches - Array of batches
  * @returns {Object} Statistics object
  */
-export function getBatchStats(batches) {
+function getBatchStats(batches) {
     const totalBatches = batches.length;
     const totalEntries = batches.reduce((sum, b) => sum + b.entries.length, 0);
     const avgEntriesPerBatch = totalBatches > 0 ? Math.round(totalEntries / totalBatches) : 0;
@@ -139,7 +139,7 @@ export function getBatchStats(batches) {
  * @param {SubtitleEntry[]} entries - Entries to format
  * @returns {string} Formatted string for API
  */
-export function formatEntriesForAPI(entries) {
+function formatEntriesForAPI(entries) {
     return entries.map(entry => {
         return `[${entry.index}]\n${entry.text}`;
     }).join('\n---\n');
@@ -151,7 +151,7 @@ export function formatEntriesForAPI(entries) {
  * @param {SubtitleEntry[]} translatedContext - Their translations (if available)
  * @returns {string} Formatted context string
  */
-export function formatContextForAPI(contextEntries, translatedContext = []) {
+function formatContextForAPI(contextEntries, translatedContext = []) {
     if (contextEntries.length === 0) return '';
     
     const contextPairs = contextEntries.map((entry, i) => {
@@ -172,7 +172,7 @@ export function formatContextForAPI(contextEntries, translatedContext = []) {
  * @param {SubtitleEntry[]} originalEntries - Original entries for reference
  * @returns {SubtitleEntry[]} Parsed translated entries
  */
-export function parseAPIResponse(response, originalEntries) {
+function parseAPIResponse(response, originalEntries) {
     const translatedEntries = [];
     
     // Split response by separator
@@ -224,7 +224,7 @@ export function parseAPIResponse(response, originalEntries) {
  * @param {Array<SubtitleEntry[]>} translatedBatches - Array of translated batch entries
  * @returns {SubtitleEntry[]} Merged entries array
  */
-export function mergeBatches(translatedBatches) {
+function mergeBatches(translatedBatches) {
     return translatedBatches.flat();
 }
 
@@ -233,7 +233,7 @@ export function mergeBatches(translatedBatches) {
  * @param {number} totalBatches - Total number of batches
  * @returns {Object} Progress tracker object
  */
-export function createProgressTracker(totalBatches) {
+function createProgressTracker(totalBatches) {
     let completedBatches = 0;
     let completedEntries = 0;
     let totalEntries = 0;
@@ -291,3 +291,19 @@ export function createProgressTracker(totalBatches) {
         }
     };
 }
+
+(function (g) {
+    const ns = g.ST = g.ST || {};
+    Object.assign(ns, {
+        DEFAULT_CONFIG,
+        estimateTokens,
+        calculateBatchTokens,
+        createBatches,
+        getBatchStats,
+        formatEntriesForAPI,
+        formatContextForAPI,
+        parseAPIResponse,
+        mergeBatches,
+        createProgressTracker
+    });
+})(typeof globalThis !== 'undefined' ? globalThis : window);
