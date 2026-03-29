@@ -321,6 +321,10 @@ function showDownload() {
         elements.downloadStats.textContent = `${totalEntries} subtitles translated successfully`;
     }
     elements.downloadCard.hidden = false;
+    requestAnimationFrame(() => {
+        elements.downloadBtn.focus({ preventScroll: false });
+        elements.downloadCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
 }
 
 function resetUI() {
@@ -559,15 +563,13 @@ async function startTranslation(resumeData = null) {
         // Log completion
         addLogEntry('response', `Translation complete!`, `Successfully translated ${stats.totalEntries} subtitles`);
 
-        // Show results
+        // Show results (download first so it sits under Translate and stays visible)
         setTimeout(() => {
             hideProgress();
-            showPreview();
             showDownload();
-
-            // Switch to translated tab
+            showPreview();
             switchPreviewTab('translated');
-        }, 500);
+        }, 150);
 
     } catch (error) {
         console.error('Translation error:', error);

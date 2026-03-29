@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&family=Patrick+Hand&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260332">
+    <link rel="stylesheet" href="css/style.css?v=20260403">
 </head>
 <body>
     <svg class="noise-overlay" aria-hidden="true">
@@ -218,8 +218,47 @@
                     <path d="m22 22-5-10-5 10"/>
                     <path d="M14 18h6"/>
                 </svg>
-                <span>Translate Subtitles</span>
+                <span class="btn-translate-text">Translate Subtitles</span>
+                <span class="translate-loader" aria-hidden="true">
+                    <span class="translate-loader-dot"></span>
+                    <span class="translate-loader-dot"></span>
+                    <span class="translate-loader-dot"></span>
+                </span>
             </button>
+
+            <!-- Download (shown when translation completes — above log/preview so it stays visible) -->
+            <section class="card download-card" id="downloadCard" hidden>
+                <div class="card-header">
+                    <h2>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download
+                    </h2>
+                </div>
+                <div class="card-body download-body">
+                    <div class="download-info">
+                        <div class="success-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                        </div>
+                        <p class="download-message">Translation complete!</p>
+                        <span class="download-stats" id="downloadStats"></span>
+                    </div>
+                    <button type="button" class="btn-download" id="downloadBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        <span>Download Translated Subtitle</span>
+                    </button>
+                </div>
+            </section>
 
             <div class="main-outputs">
             <!-- Event Log Section -->
@@ -267,40 +306,6 @@
                         <pre class="subtitle-preview" id="originalPreview"></pre>
                         <pre class="subtitle-preview" id="translatedPreview" hidden></pre>
                     </div>
-                </div>
-            </section>
-
-            <!-- Download Section -->
-            <section class="card download-card" id="downloadCard" hidden>
-                <div class="card-header">
-                    <h2>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/>
-                            <line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                        Download
-                    </h2>
-                </div>
-                <div class="card-body download-body">
-                    <div class="download-info">
-                        <div class="success-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                <polyline points="22 4 12 14.01 9 11.01"/>
-                            </svg>
-                        </div>
-                        <p class="download-message">Translation complete!</p>
-                        <span class="download-stats" id="downloadStats"></span>
-                    </div>
-                    <button type="button" class="btn-download" id="downloadBtn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/>
-                            <line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                        <span>Download Translated Subtitle</span>
-                    </button>
                 </div>
             </section>
             </div>
@@ -366,9 +371,9 @@
     </div>
 
     <!-- Classic scripts (no ES modules): works on GitHub Pages and when opening index.html via file:// -->
-    <script src="js/parser.js?v=20260331"></script>
-    <script src="js/batcher.js?v=20260331"></script>
-    <script src="js/translator.js?v=20260331"></script>
-    <script src="js/app.js?v=20260331"></script>
+    <script src="js/parser.js?v=20260403"></script>
+    <script src="js/batcher.js?v=20260403"></script>
+    <script src="js/translator.js?v=20260403"></script>
+    <script src="js/app.js?v=20260403"></script>
 </body>
 </html>

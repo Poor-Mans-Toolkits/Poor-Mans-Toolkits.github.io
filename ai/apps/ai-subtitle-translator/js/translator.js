@@ -161,16 +161,13 @@ async function callGeminiAPI(apiKey, prompt) {
         } else if (response.status === 429) {
             throw new Error('Rate limit exceeded. Please wait a moment and try again.');
         } else if (response.status >= 500) {
-            throw new Error('Gemini API server error. Please try again later.');
+            throw new Error(`Gemini API server error (${response.status}). Please try again later.`);
         }
 
         throw new Error(`API error: ${errorMessage}`);
     }
 
     const data = await response.json();
-
-    // Log raw response for debugging
-    console.log('Gemini API response:', JSON.stringify(data, null, 2));
 
     // Check for blocked content
     if (data.promptFeedback?.blockReason) {
@@ -263,11 +260,15 @@ async function translateBatchWithRetry(apiKey, batch, targetLang, translatedCont
         } catch (error) {
             lastError = error;
 
-            // Retry on rate limit OR empty response errors
+            // Retry on rate limit, transient server errors (503/502/504), or empty response errors
             const isRetryable =
                 error.message.includes('Rate limit') ||
                 error.message.includes('429') ||
                 error.message.includes('Too Many') ||
+                error.message.includes('Gemini API server error') ||
+                error.message.includes('503') ||
+                error.message.includes('502') ||
+                error.message.includes('504') ||
                 error.message.includes('Empty response') ||
                 error.message.includes('empty candidates') ||
                 error.message.includes('No response from Gemini');
@@ -286,7 +287,7 @@ async function translateBatchWithRetry(apiKey, batch, targetLang, translatedCont
                 const totalDelay = backoffDelay + jitter;
 
                 const waitSeconds = Math.round(totalDelay / 1000);
-                console.log(`Rate limited. Waiting ${waitSeconds}s before retry (attempt ${attempt + 1}/${maxRetries})...`);
+                console.log(`Waiting ${waitSeconds}s before retry (attempt ${attempt + 1}/${maxRetries})...`);
 
                 if (onWaiting) {
                     onWaiting(waitSeconds, attempt + 1, maxRetries);
@@ -361,11 +362,11 @@ async function translateAllBatches(apiKey, batches, targetLang, onProgress, sign
                 (waitSeconds, attempt, maxRetries) => {
                     // Update UI to show waiting status
                     if (onProgress) {
-                        onProgress(i, batches.length, 0, `Rate limited. Waiting ${waitSeconds}s... (retry ${attempt}/${maxRetries})`);
+                        onProgress(i, batches.length, 0, `Waiting ${waitSeconds}s before retry (${attempt}/${maxRetries})...`);
                     }
                     // Log waiting
                     if (onLog) {
-                        onLog('waiting', `Rate limited - waiting ${waitSeconds}s (attempt ${attempt}/${maxRetries})`, null, batchNum);
+                        onLog('waiting', `Waiting ${waitSeconds}s before retry (attempt ${attempt}/${maxRetries})`, null, batchNum);
                     }
                 }
             );
