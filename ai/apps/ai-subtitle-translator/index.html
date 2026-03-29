@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&family=Patrick+Hand&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260330">
+    <link rel="stylesheet" href="css/style.css?v=20260332">
 </head>
 <body>
     <svg class="noise-overlay" aria-hidden="true">
@@ -165,6 +165,46 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Translation Progress (below settings) -->
+            <section class="card progress-card" id="progressCard" hidden>
+                <div class="card-header">
+                    <h2>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v4"/>
+                            <path d="m16.2 7.8 2.9-2.9"/>
+                            <path d="M18 12h4"/>
+                            <path d="m16.2 16.2 2.9 2.9"/>
+                            <path d="M12 18v4"/>
+                            <path d="m4.9 19.1 2.9-2.9"/>
+                            <path d="M2 12h4"/>
+                            <path d="m4.9 4.9 2.9 2.9"/>
+                        </svg>
+                        Translation Progress
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="progress-wrapper">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span class="progress-text" id="progressText">Preparing...</span>
+                            <span class="progress-percent" id="progressPercent">0%</span>
+                        </div>
+                    </div>
+                    <div class="progress-details" id="progressDetails">
+                        <div class="detail-item">
+                            <span class="detail-label">Batches</span>
+                            <span class="detail-value" id="batchProgress">0 / 0</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Subtitles</span>
+                            <span class="detail-value" id="subtitleProgress">0 / 0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
             </div>
 
             <div class="main-actions">
@@ -204,46 +244,6 @@
                 </div>
                 <div class="card-body log-body">
                     <div class="log-container" id="logContainer"></div>
-                </div>
-            </section>
-
-            <!-- Progress Section -->
-            <section class="card progress-card" id="progressCard" hidden>
-                <div class="card-header">
-                    <h2>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2v4"/>
-                            <path d="m16.2 7.8 2.9-2.9"/>
-                            <path d="M18 12h4"/>
-                            <path d="m16.2 16.2 2.9 2.9"/>
-                            <path d="M12 18v4"/>
-                            <path d="m4.9 19.1 2.9-2.9"/>
-                            <path d="M2 12h4"/>
-                            <path d="m4.9 4.9 2.9 2.9"/>
-                        </svg>
-                        Translation Progress
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <div class="progress-wrapper">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progressFill"></div>
-                        </div>
-                        <div class="progress-info">
-                            <span class="progress-text" id="progressText">Preparing...</span>
-                            <span class="progress-percent" id="progressPercent">0%</span>
-                        </div>
-                    </div>
-                    <div class="progress-details" id="progressDetails">
-                        <div class="detail-item">
-                            <span class="detail-label">Batches</span>
-                            <span class="detail-value" id="batchProgress">0 / 0</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Subtitles</span>
-                            <span class="detail-value" id="subtitleProgress">0 / 0</span>
-                        </div>
-                    </div>
                 </div>
             </section>
 

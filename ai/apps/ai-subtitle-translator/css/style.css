@@ -259,6 +259,10 @@ body {
     overflow-y: auto;
 }
 
+.main-work .progress-card {
+    flex: 0 0 auto;
+}
+
 /* Translate, resume, and output stack — capped so shell stays in view */
 .main-actions {
     flex: 0 1 auto;
