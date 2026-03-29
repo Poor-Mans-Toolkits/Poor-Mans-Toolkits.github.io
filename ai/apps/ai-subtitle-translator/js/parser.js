@@ -25,7 +25,7 @@
  * @param {string} content - Raw subtitle file content
  * @returns {'srt' | 'vtt'} The detected format
  */
-export function detectFormat(content) {
+function detectFormat(content) {
     const trimmed = content.trim();
     if (trimmed.startsWith('WEBVTT')) {
         return 'vtt';
@@ -38,7 +38,7 @@ export function detectFormat(content) {
  * @param {string} content - Raw SRT file content
  * @returns {ParsedSubtitle} Parsed subtitle object
  */
-export function parseSRT(content) {
+function parseSRT(content) {
     const entries = [];
     const normalizedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     
@@ -87,7 +87,7 @@ export function parseSRT(content) {
  * @param {string} content - Raw VTT file content
  * @returns {ParsedSubtitle} Parsed subtitle object
  */
-export function parseVTT(content) {
+function parseVTT(content) {
     const entries = [];
     const normalizedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     
@@ -158,7 +158,7 @@ export function parseVTT(content) {
  * @param {string} content - Raw subtitle file content
  * @returns {ParsedSubtitle} Parsed subtitle object
  */
-export function parseSubtitle(content) {
+function parseSubtitle(content) {
     const format = detectFormat(content);
     return format === 'vtt' ? parseVTT(content) : parseSRT(content);
 }
@@ -168,7 +168,7 @@ export function parseSubtitle(content) {
  * @param {SubtitleEntry[]} entries - Array of subtitle entries
  * @returns {string} Generated SRT content
  */
-export function generateSRT(entries) {
+function generateSRT(entries) {
     return entries.map((entry, i) => {
         const index = entry.index || i + 1;
         // Ensure timestamps use comma separator for SRT
@@ -185,7 +185,7 @@ export function generateSRT(entries) {
  * @param {string} [header='WEBVTT'] - VTT header
  * @returns {string} Generated VTT content
  */
-export function generateVTT(entries, header = 'WEBVTT') {
+function generateVTT(entries, header = 'WEBVTT') {
     const cues = entries.map((entry, i) => {
         const index = entry.index || i + 1;
         // Ensure timestamps use period separator for VTT
@@ -203,7 +203,7 @@ export function generateVTT(entries, header = 'WEBVTT') {
  * @param {ParsedSubtitle} subtitle - Parsed subtitle object with translated entries
  * @returns {string} Generated subtitle content
  */
-export function generateSubtitle(subtitle) {
+function generateSubtitle(subtitle) {
     if (subtitle.format === 'vtt') {
         return generateVTT(subtitle.entries, subtitle.header);
     }
@@ -216,7 +216,7 @@ export function generateSubtitle(subtitle) {
  * @param {number} [count=10] - Number of entries to preview
  * @returns {string} Preview text
  */
-export function createPreview(entries, count = 10) {
+function createPreview(entries, count = 10) {
     const previewEntries = entries.slice(0, count);
     return previewEntries.map((entry, i) => {
         return `[${entry.index || i + 1}] ${entry.startTime} --> ${entry.endTime}\n${entry.text}`;
@@ -228,8 +228,23 @@ export function createPreview(entries, count = 10) {
  * @param {number} bytes - File size in bytes
  * @returns {string} Formatted file size
  */
-export function formatFileSize(bytes) {
+function formatFileSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 }
+
+(function (g) {
+    const ns = g.ST = g.ST || {};
+    Object.assign(ns, {
+        detectFormat,
+        parseSRT,
+        parseVTT,
+        parseSubtitle,
+        generateSRT,
+        generateVTT,
+        generateSubtitle,
+        createPreview,
+        formatFileSize
+    });
+})(typeof globalThis !== 'undefined' ? globalThis : window);

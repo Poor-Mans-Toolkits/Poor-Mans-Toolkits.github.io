@@ -3,19 +3,13 @@
  * Handles communication with Google Gemini API for translations
  */
 
-import { formatEntriesForAPI, formatContextForAPI, parseAPIResponse } from './batcher.js';
-
-/**
- * @typedef {import('./parser.js').SubtitleEntry} SubtitleEntry
- * @typedef {import('./batcher.js').Batch} Batch
- */
+const { formatEntriesForAPI, formatContextForAPI, parseAPIResponse } = window.ST;
 
 /**
  * Gemini API configuration
  */
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-// Using gemini-2.0-flash as it's more stable. Change to 'gemini-1.5-flash' if issues persist.
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-3-flash-preview';
 
 /**
  * Language names mapping for prompts
@@ -94,7 +88,7 @@ let currentModel = GEMINI_MODEL;
  * Set the model to use
  * @param {string} model - Model name
  */
-export function setModel(model) {
+function setModel(model) {
     currentModel = model;
     console.log(`Model set to: ${model}`);
 }
@@ -103,7 +97,7 @@ export function setModel(model) {
  * Get the current model
  * @returns {string} Current model name
  */
-export function getModel() {
+function getModel() {
     return currentModel;
 }
 
@@ -222,7 +216,7 @@ async function callGeminiAPI(apiKey, prompt) {
  * @param {SubtitleEntry[]} translatedContext - Previous translations for context
  * @returns {Promise<SubtitleEntry[]>} Translated entries
  */
-export async function translateBatch(apiKey, batch, targetLang, translatedContext = []) {
+async function translateBatch(apiKey, batch, targetLang, translatedContext = []) {
     const prompt = createTranslationPrompt(
         batch.entries,
         targetLang,
@@ -319,7 +313,7 @@ async function translateBatchWithRetry(apiKey, batch, targetLang, translatedCont
  * @param {SubtitleEntry[]} [existingEntries=[]] - Already translated entries when resuming
  * @returns {Promise<SubtitleEntry[]>} All translated entries
  */
-export async function translateAllBatches(apiKey, batches, targetLang, onProgress, signal, onLog, onBatchComplete, startFromBatch = 0, existingEntries = []) {
+async function translateAllBatches(apiKey, batches, targetLang, onProgress, signal, onLog, onBatchComplete, startFromBatch = 0, existingEntries = []) {
     const allTranslatedEntries = [...existingEntries];
 
     // Much longer delay between batches (4 seconds) to stay under rate limits
@@ -346,7 +340,7 @@ export async function translateAllBatches(apiKey, batches, targetLang, onProgres
 
         // Update status to show we're translating
         if (onProgress) {
-            onProgress(i, batches.length, batch.entries.length, `Translating batch ${i + 1} of ${batches.length}...`);
+            onProgress(i, batches.length, 0, `Translating batch ${i + 1} of ${batches.length}...`);
         }
 
         // Log request
@@ -421,13 +415,13 @@ export async function translateAllBatches(apiKey, batches, targetLang, onProgres
  * @param {string} apiKey - API key to validate
  * @returns {Promise<boolean>} True if valid
  */
-export async function validateApiKey(apiKey) {
+async function validateApiKey(apiKey) {
     if (!apiKey || apiKey.trim().length === 0) {
         return false;
     }
 
     try {
-        const url = `${GEMINI_API_BASE}/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+        const url = `${GEMINI_API_BASE}/${currentModel}:generateContent?key=${apiKey}`;
 
         const response = await fetch(url, {
             method: 'POST',
@@ -460,3 +454,14 @@ export async function validateApiKey(apiKey) {
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+(function (g) {
+    const ns = g.ST = g.ST || {};
+    Object.assign(ns, {
+        setModel,
+        getModel,
+        translateBatch,
+        translateAllBatches,
+        validateApiKey
+    });
+})(typeof globalThis !== 'undefined' ? globalThis : window);

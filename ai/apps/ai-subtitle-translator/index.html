@@ -4,17 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SubTranslator - AI Subtitle Translator</title>
+    <script>
+        (function () {
+            try {
+                var k = 'subtranslator_theme';
+                var t = localStorage.getItem(k);
+                if (t === 'light' || t === 'dark') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&family=Patrick+Hand&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=20260329e">
 </head>
 <body>
-    <div class="background-effects">
-        <div class="gradient-orb orb-1"></div>
-        <div class="gradient-orb orb-2"></div>
-        <div class="gradient-orb orb-3"></div>
-    </div>
+    <svg class="noise-overlay" aria-hidden="true">
+        <title>Background texture</title>
+        <filter id="noiseFilter">
+            <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/>
+        </filter>
+        <rect width="100%" height="100%" filter="url(#noiseFilter)"/>
+    </svg>
 
     <div class="container">
         <header class="header">
@@ -27,36 +40,26 @@
                 <span class="logo-text">SubTranslator</span>
             </div>
             <p class="tagline">AI-powered subtitle translation with Gemini</p>
+            <div class="header-actions">
+                <button type="button" class="btn-theme-toggle" id="themeToggle" title="Switch theme" aria-label="Switch to light or dark theme" aria-pressed="false">
+                    <span class="theme-toggle-icon theme-toggle-moon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </span>
+                    <span class="theme-toggle-icon theme-toggle-sun" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                    </span>
+                </button>
+                <button type="button" class="btn-api-key" id="apiKeyStatus" title="Manage API Key">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                    </svg>
+                    <span id="apiKeyLabel">NO API KEY</span>
+                </button>
+            </div>
         </header>
 
         <main class="main-content">
-            <!-- API Key Section -->
-            <section class="card api-card">
-                <div class="card-header">
-                    <h2>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-                        </svg>
-                        API Configuration
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <div class="input-group">
-                        <label for="apiKey">Gemini API Key</label>
-                        <div class="input-wrapper">
-                            <input type="password" id="apiKey" placeholder="Enter your Gemini API key" autocomplete="off">
-                            <button type="button" class="toggle-visibility" id="toggleApiKey" aria-label="Toggle API key visibility">
-                                <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                    <circle cx="12" cy="12" r="3"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <span class="input-hint">Get your free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a></span>
-                    </div>
-                </div>
-            </section>
-
+            <div class="main-work">
             <!-- Upload Section -->
             <section class="card upload-card">
                 <div class="card-header">
@@ -140,29 +143,31 @@
                         <div class="input-group">
                             <label for="batchSize">Batch Size</label>
                             <select id="batchSize">
-                                <option value="10">10 subtitles (safest)</option>
-                                <option value="15">15 subtitles (slower, safer)</option>
-                                <option value="25" selected>25 subtitles (recommended)</option>
-                                <option value="50">50 subtitles (faster)</option>
-                                <option value="75">75 subtitles (fastest)</option>
-                                <option value="100">100 subtitles (riskier)</option>
-                                <option value="150">150 subtitles (riskiest)</option>
-                                <option value="200">200 subtitles (not recommended)</option>
+                                <option value="100" selected>100 subtitles (recommended)</option>
+                                <option value="200">200 subtitles (faster, riskier)</option>
                             </select>
                         </div>
                         <div class="input-group">
                             <label for="modelSelect">AI Model</label>
                             <select id="modelSelect">
-                                <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash</option>
-                                <option value="gemini-3-flash-preview" selected>gemini-3-flash-preview</option>
-                                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                                <option value="gemini-1.5-pro">Gemini 1.5 Pro (slower)</option>
+                                <optgroup label="Active Models">
+                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                                    <option value="gemini-3-flash-preview" selected>Gemini 3 Flash (Preview)</option>
+                                </optgroup>
+                                <optgroup label="Deprecated">
+                                    <option value="gemini-2.0-flash" disabled>Gemini 2.0 Flash (Deprecated)</option>
+                                    <option value="gemini-1.5-flash" disabled>Gemini 1.5 Flash (Deprecated)</option>
+                                    <option value="gemini-1.5-pro" disabled>Gemini 1.5 Pro (Deprecated)</option>
+                                </optgroup>
                             </select>
                         </div>
                     </div>
                 </div>
             </section>
+            </div>
 
+            <div class="main-actions">
             <!-- Translate Button -->
             <button type="button" class="btn-translate" id="translateBtn" disabled>
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -176,6 +181,7 @@
                 <span>Translate Subtitles</span>
             </button>
 
+            <div class="main-outputs">
             <!-- Event Log Section -->
             <section class="card log-card" id="logCard" hidden>
                 <div class="card-header">
@@ -297,11 +303,48 @@
                     </button>
                 </div>
             </section>
+            </div>
+            </div>
         </main>
 
         <footer class="footer">
             <p>Powered by Google Gemini AI | created by <a href="https://fozael.github.io" target="_blank" rel="noopener">FOZAEL</a></p>
         </footer>
+    </div>
+
+    <!-- API Key Modal -->
+    <div class="modal-overlay" id="apiKeyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                    </svg>
+                    ENTER YOUR GEMINI API KEY
+                </h2>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">A Gemini API key is required to translate subtitles. The key is stored locally in your browser and never sent anywhere except Google's API.</p>
+                <p class="modal-link">Get your free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a></p>
+                <div class="input-group">
+                    <label for="modalApiKey">API Key</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="modalApiKey" placeholder="Paste your API key here" autocomplete="off">
+                        <button type="button" class="toggle-visibility" id="toggleModalApiKey" aria-label="Toggle API key visibility">
+                            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <p class="modal-status" id="modalStatus" hidden></p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-validate" id="validateKeyBtn">VALIDATE & SAVE</button>
+                <button type="button" class="btn-skip" id="skipKeyBtn">SKIP</button>
+            </div>
+        </div>
     </div>
 
     <!-- Error Toast -->
@@ -322,6 +365,10 @@
         </button>
     </div>
 
-    <script type="module" src="js/app.js"></script>
+    <!-- Classic scripts (no ES modules): works on GitHub Pages and when opening index.html via file:// -->
+    <script src="js/parser.js?v=20260329e"></script>
+    <script src="js/batcher.js?v=20260329e"></script>
+    <script src="js/translator.js?v=20260329e"></script>
+    <script src="js/app.js?v=20260329e"></script>
 </body>
 </html>
