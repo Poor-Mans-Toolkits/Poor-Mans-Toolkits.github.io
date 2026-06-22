@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&family=Patrick+Hand&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260403">
+    <link rel="stylesheet" href="css/style.css?v=20260622">
 </head>
 <body>
     <svg class="noise-overlay" aria-hidden="true">
@@ -49,11 +49,20 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
                     </span>
                 </button>
-                <button type="button" class="btn-api-key" id="apiKeyStatus" title="Manage API Key">
+                <button type="button" class="btn-api-key" id="apiKeyStatus" title="Manage Gemini API Key">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
                     </svg>
                     <span id="apiKeyLabel">NO API KEY</span>
+                </button>
+                <button type="button" class="btn-api-key btn-stt-key" id="elevenLabsKeyStatus" title="Manage ElevenLabs (Speech-to-Text) API Key">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                    </svg>
+                    <span id="elevenLabsKeyLabel">NO STT KEY</span>
                 </button>
             </div>
         </header>
@@ -69,7 +78,7 @@
                             <polyline points="17 8 12 3 7 8"/>
                             <line x1="12" y1="3" x2="12" y2="15"/>
                         </svg>
-                        Upload Subtitle
+                        Upload Subtitle or Video
                     </h2>
                 </div>
                 <div class="card-body">
@@ -82,11 +91,11 @@
                                 <line x1="9" y1="15" x2="12" y2="12"/>
                                 <line x1="15" y1="15" x2="12" y2="12"/>
                             </svg>
-                            <p class="dropzone-text">Drag & drop your subtitle file here</p>
+                            <p class="dropzone-text">Drag & drop a subtitle or video file</p>
                             <p class="dropzone-subtext">or click to browse</p>
-                            <span class="dropzone-formats">Supports SRT and VTT formats</span>
+                            <span class="dropzone-formats">SRT, VTT — or video (MP4, MKV, MOV, WEBM…)</span>
                         </div>
-                        <input type="file" id="fileInput" accept=".srt,.vtt" hidden>
+                        <input type="file" id="fileInput" accept=".srt,.vtt,video/*,.mp4,.mkv,.mov,.webm,.avi,.m4v,.wmv,.flv,.mpeg,.mpg,.3gp,.ts,.ogv" hidden>
                     </div>
                     <div class="file-info" id="fileInfo" hidden>
                         <div class="file-details">
@@ -105,6 +114,62 @@
                                 <line x1="6" y1="6" x2="18" y2="18"/>
                             </svg>
                         </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Video Processing (step-by-step; appears below upload for video imports) -->
+            <section class="card video-steps-card" id="videoStepsCard" hidden>
+                <div class="card-header">
+                    <h2>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="23 7 16 12 23 17 23 7"/>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                        Video Processing
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="vsteps">
+                        <div class="vstep" id="vstep1" data-state="pending">
+                            <div class="vstep-icon">
+                                <span class="vstep-num">1</span>
+                                <svg class="vstep-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                            <div class="vstep-main">
+                                <div class="vstep-head">
+                                    <span class="vstep-label">Extract audio</span>
+                                    <span class="vstep-status" id="vstep1Status">Waiting</span>
+                                </div>
+                                <div class="vstep-bar"><div class="vstep-fill" id="vstep1Fill"></div></div>
+                            </div>
+                        </div>
+                        <div class="vstep" id="vstep2" data-state="pending">
+                            <div class="vstep-icon">
+                                <span class="vstep-num">2</span>
+                                <svg class="vstep-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                            <div class="vstep-main">
+                                <div class="vstep-head">
+                                    <span class="vstep-label">Transcribe (ElevenLabs)</span>
+                                    <span class="vstep-status" id="vstep2Status">Waiting</span>
+                                </div>
+                                <div class="vstep-bar"><div class="vstep-fill" id="vstep2Fill"></div></div>
+                            </div>
+                        </div>
+                        <div class="vstep" id="vstep3" data-state="pending">
+                            <div class="vstep-icon">
+                                <span class="vstep-num">3</span>
+                                <svg class="vstep-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                            <div class="vstep-main">
+                                <div class="vstep-head">
+                                    <span class="vstep-label">Translate</span>
+                                    <span class="vstep-status" id="vstep3Status">Waiting</span>
+                                </div>
+                                <div class="vstep-bar"><div class="vstep-fill" id="vstep3Fill"></div></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -160,6 +225,13 @@
                                     <option value="gemini-1.5-flash" disabled>Gemini 1.5 Flash (Deprecated)</option>
                                     <option value="gemini-1.5-pro" disabled>Gemini 1.5 Pro (Deprecated)</option>
                                 </optgroup>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="sttModel">Transcription (video)</label>
+                            <select id="sttModel">
+                                <option value="scribe_v1" selected>ElevenLabs Scribe v1</option>
+                                <option value="scribe_v2">ElevenLabs Scribe v2</option>
                             </select>
                         </div>
                     </div>
@@ -352,6 +424,44 @@
         </div>
     </div>
 
+    <!-- ElevenLabs (Speech-to-Text) API Key Modal -->
+    <div class="modal-overlay" id="elevenLabsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                    </svg>
+                    ENTER YOUR ELEVENLABS API KEY
+                </h2>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">An ElevenLabs API key is required to transcribe video into subtitles. The key is stored locally in your browser and is sent only to ElevenLabs.</p>
+                <p class="modal-link">Get your key from <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener">ElevenLabs API Keys</a></p>
+                <div class="input-group">
+                    <label for="modalElevenLabsKey">API Key</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="modalElevenLabsKey" placeholder="Paste your ElevenLabs API key here" autocomplete="off">
+                        <button type="button" class="toggle-visibility" id="toggleElevenLabsKey" aria-label="Toggle API key visibility">
+                            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <p class="modal-status" id="elevenLabsModalStatus" hidden></p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-validate" id="saveElevenLabsKey">SAVE KEY</button>
+                <button type="button" class="btn-skip" id="skipElevenLabsKey">SKIP</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Error Toast -->
     <div class="toast" id="toast" hidden>
         <div class="toast-content">
@@ -370,10 +480,20 @@
         </button>
     </div>
 
+    <!-- ffmpeg.wasm (single-threaded UMD) for in-browser audio extraction from video.
+         These two small files (ffmpeg.js + its 814.ffmpeg.js worker, pinned to 0.12.15)
+         are vendored locally so the worker is SAME-ORIGIN and runs as a classic worker
+         (a cross-origin CDN worker is blocked by the browser). The big ~31MB core/wasm
+         are still fetched from the CDN on demand. The small toBlobURL/fetchFile helpers
+         live in audio-extractor.js (the @ffmpeg/util UMD is not browser-safe). -->
+    <script src="js/vendor/ffmpeg/ffmpeg.js?v=20260622"></script>
+
     <!-- Classic scripts (no ES modules): works on GitHub Pages and when opening index.html via file:// -->
-    <script src="js/parser.js?v=20260403"></script>
-    <script src="js/batcher.js?v=20260403"></script>
-    <script src="js/translator.js?v=20260403"></script>
-    <script src="js/app.js?v=20260403"></script>
+    <script src="js/parser.js?v=20260622"></script>
+    <script src="js/batcher.js?v=20260622"></script>
+    <script src="js/translator.js?v=20260622"></script>
+    <script src="js/audio-extractor.js?v=20260622b"></script>
+    <script src="js/transcriber.js?v=20260622b"></script>
+    <script src="js/app.js?v=20260622"></script>
 </body>
 </html>

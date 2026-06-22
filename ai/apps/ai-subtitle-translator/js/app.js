@@ -11,12 +11,15 @@ const ST = window.ST;
 
 const state = {
     apiKey: '',
+    elevenLabsKey: '',
     file: null,
     fileName: '',
     fileFormat: 'srt',
     parsedSubtitle: null,
     translatedSubtitle: null,
     isTranslating: false,
+    isProcessingVideo: false,
+    videoMode: false,
     abortController: null
 };
 
@@ -41,6 +44,10 @@ const elements = {
     targetLang: document.getElementById('targetLang'),
     batchSize: document.getElementById('batchSize'),
     modelSelect: document.getElementById('modelSelect'),
+    sttModel: document.getElementById('sttModel'),
+
+    // Video Processing stepper
+    videoStepsCard: document.getElementById('videoStepsCard'),
 
     // Translate Button
     translateBtn: document.getElementById('translateBtn'),
@@ -74,13 +81,23 @@ const elements = {
     toastMessage: document.getElementById('toastMessage'),
     toastClose: document.getElementById('toastClose'),
 
-    // API Key Modal
+    // API Key Modal (Gemini)
     apiKeyModal: document.getElementById('apiKeyModal'),
     modalApiKey: document.getElementById('modalApiKey'),
     toggleModalApiKey: document.getElementById('toggleModalApiKey'),
     modalStatus: document.getElementById('modalStatus'),
     validateKeyBtn: document.getElementById('validateKeyBtn'),
     skipKeyBtn: document.getElementById('skipKeyBtn'),
+
+    // ElevenLabs (Speech-to-Text) key + modal
+    elevenLabsKeyStatus: document.getElementById('elevenLabsKeyStatus'),
+    elevenLabsKeyLabel: document.getElementById('elevenLabsKeyLabel'),
+    elevenLabsModal: document.getElementById('elevenLabsModal'),
+    modalElevenLabsKey: document.getElementById('modalElevenLabsKey'),
+    toggleElevenLabsKey: document.getElementById('toggleElevenLabsKey'),
+    elevenLabsModalStatus: document.getElementById('elevenLabsModalStatus'),
+    saveElevenLabsKeyBtn: document.getElementById('saveElevenLabsKey'),
+    skipElevenLabsKeyBtn: document.getElementById('skipElevenLabsKey'),
 
     themeToggle: document.getElementById('themeToggle')
 };
@@ -90,6 +107,7 @@ const elements = {
 // ============================================
 
 const STORAGE_KEY = 'subtranslator_apikey';
+const ELEVENLABS_STORAGE_KEY = 'subtranslator_elevenlabs_apikey';
 const PROGRESS_KEY = 'subtranslator_progress';
 const THEME_KEY = 'subtranslator_theme';
 
@@ -132,6 +150,22 @@ function saveApiKey(key) {
 function loadApiKey() {
     try {
         return localStorage.getItem(STORAGE_KEY) || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function saveElevenLabsKey(key) {
+    try {
+        localStorage.setItem(ELEVENLABS_STORAGE_KEY, key);
+    } catch (e) {
+        console.warn('Could not save ElevenLabs API key to localStorage');
+    }
+}
+
+function loadElevenLabsKey() {
+    try {
+        return localStorage.getItem(ELEVENLABS_STORAGE_KEY) || '';
     } catch (e) {
         return '';
     }
@@ -270,7 +304,7 @@ function showLog() {
 
 function updateTranslateButton() {
     const hasFile = state.parsedSubtitle !== null;
-    elements.translateBtn.disabled = !hasFile || state.isTranslating;
+    elements.translateBtn.disabled = !hasFile || state.isTranslating || state.isProcessingVideo;
 }
 
 function setTranslating(translating) {
@@ -282,6 +316,7 @@ function setTranslating(translating) {
     elements.targetLang.disabled = translating;
     elements.batchSize.disabled = translating;
     elements.modelSelect.disabled = translating;
+    if (elements.sttModel) elements.sttModel.disabled = translating;
     elements.dropzone.style.pointerEvents = translating ? 'none' : 'auto';
 }
 
@@ -295,6 +330,16 @@ function updateProgress(completedBatches, totalBatches, completedEntries, totalE
         : 'Finalizing...');
     elements.batchProgress.textContent = `${completedBatches} / ${totalBatches}`;
     elements.subtitleProgress.textContent = `${completedEntries} / ${totalEntries}`;
+
+    // Mirror translation progress onto the video stepper (step 3) when a video
+    // import is in play.
+    if (state.videoMode) {
+        const v3 = document.getElementById('vstep3');
+        const s = v3 && v3.getAttribute('data-state');
+        if (v3 && s !== 'done' && s !== 'error') {
+            setVideoStep(3, 'active', statusText || `Translating... ${percent}%`, percent);
+        }
+    }
 }
 
 function showProgress() {
@@ -332,6 +377,53 @@ function resetUI() {
     elements.previewCard.hidden = true;
     elements.downloadCard.hidden = true;
     state.translatedSubtitle = null;
+}
+
+// ============================================
+// Video Processing Stepper
+// ============================================
+
+function showVideoSteps() {
+    if (elements.videoStepsCard) elements.videoStepsCard.hidden = false;
+}
+
+function hideVideoSteps() {
+    if (elements.videoStepsCard) elements.videoStepsCard.hidden = true;
+}
+
+function resetVideoSteps() {
+    [1, 2, 3].forEach((n) => {
+        setVideoStep(n, 'pending', 'Waiting', 0);
+        stopIndeterminate(n);
+    });
+}
+
+/**
+ * Update a single step's visual state.
+ * @param {number} n - Step number (1-3)
+ * @param {string} stateStr - pending | active | ready | done | error
+ * @param {string|null} statusText
+ * @param {number|null} percent
+ */
+function setVideoStep(n, stateStr, statusText, percent) {
+    const stepEl = document.getElementById('vstep' + n);
+    const statusEl = document.getElementById('vstep' + n + 'Status');
+    const fillEl = document.getElementById('vstep' + n + 'Fill');
+    if (stepEl) stepEl.setAttribute('data-state', stateStr);
+    if (statusEl && statusText != null) statusEl.textContent = statusText;
+    if (fillEl && percent != null) {
+        fillEl.style.width = Math.max(0, Math.min(100, percent)) + '%';
+    }
+}
+
+function startIndeterminate(n) {
+    const bar = document.querySelector('#vstep' + n + ' .vstep-bar');
+    if (bar) bar.classList.add('indeterminate');
+}
+
+function stopIndeterminate(n) {
+    const bar = document.querySelector('#vstep' + n + ' .vstep-bar');
+    if (bar) bar.classList.remove('indeterminate');
 }
 
 // ============================================
@@ -376,17 +468,72 @@ function handleSaveApiKey() {
 }
 
 // ============================================
+// ElevenLabs (Speech-to-Text) API Key Modal
+// ============================================
+
+function showElevenLabsModal() {
+    elements.modalElevenLabsKey.value = '';
+    elements.elevenLabsModalStatus.hidden = true;
+    elements.elevenLabsModalStatus.className = 'modal-status';
+    elements.saveElevenLabsKeyBtn.disabled = false;
+    elements.elevenLabsModal.classList.add('visible');
+    requestAnimationFrame(() => elements.modalElevenLabsKey.focus());
+}
+
+function hideElevenLabsModal() {
+    elements.elevenLabsModal.classList.remove('visible');
+}
+
+function updateElevenLabsIndicator() {
+    const hasKey = state.elevenLabsKey.trim().length > 0;
+    elements.elevenLabsKeyLabel.textContent = hasKey ? 'STT KEY SET' : 'NO STT KEY';
+    elements.elevenLabsKeyStatus.classList.toggle('active', hasKey);
+}
+
+function handleSaveElevenLabsKey() {
+    const key = elements.modalElevenLabsKey.value.trim();
+    if (!key) {
+        elements.elevenLabsModalStatus.textContent = 'Please enter an API key.';
+        elements.elevenLabsModalStatus.className = 'modal-status error';
+        elements.elevenLabsModalStatus.hidden = false;
+        return;
+    }
+
+    state.elevenLabsKey = key;
+    saveElevenLabsKey(key);
+    updateElevenLabsIndicator();
+    elements.elevenLabsModalStatus.textContent = 'Saved locally in your browser.';
+    elements.elevenLabsModalStatus.className = 'modal-status success';
+    elements.elevenLabsModalStatus.hidden = false;
+    setTimeout(hideElevenLabsModal, 600);
+}
+
+// ============================================
 // File Handling
 // ============================================
 
+function isVideoFile(file) {
+    const name = (file.name || '').toLowerCase();
+    const videoExts = ['.mp4', '.mkv', '.mov', '.webm', '.avi', '.m4v', '.wmv', '.flv', '.mpeg', '.mpg', '.3gp', '.ts', '.ogv', '.m2ts', '.mts'];
+    if (videoExts.some(ext => name.endsWith(ext))) return true;
+    if (file.type && file.type.startsWith('video/')) return true;
+    return false;
+}
+
 function handleFile(file) {
+    // Video files go through the extract -> transcribe -> translate pipeline
+    if (isVideoFile(file)) {
+        processVideo(file);
+        return;
+    }
+
     // Validate file type
     const validTypes = ['.srt', '.vtt'];
     const fileName = file.name.toLowerCase();
     const isValid = validTypes.some(ext => fileName.endsWith(ext));
 
     if (!isValid) {
-        showToast('Please upload an SRT or VTT subtitle file.');
+        showToast('Please upload an SRT, VTT, or video file.');
         return;
     }
 
@@ -409,6 +556,11 @@ function handleFile(file) {
             state.fileName = file.name;
             state.fileFormat = parsed.format;
             state.parsedSubtitle = parsed;
+            state.videoMode = false;
+
+            // A plain subtitle upload hides any leftover video stepper
+            hideVideoSteps();
+            resetVideoSteps();
 
             // Update UI
             elements.fileName.textContent = file.name;
@@ -441,18 +593,138 @@ function handleFile(file) {
 }
 
 function removeFile() {
+    if (state.isProcessingVideo) {
+        showToast('Please wait for video processing to finish.');
+        return;
+    }
+
     state.file = null;
     state.fileName = '';
     state.parsedSubtitle = null;
     state.translatedSubtitle = null;
+    state.videoMode = false;
 
     elements.dropzone.hidden = false;
     elements.fileInfo.hidden = true;
     elements.fileInput.value = '';
 
+    hideVideoSteps();
+    resetVideoSteps();
     resetUI();
     hideResumeBanner();
     updateTranslateButton();
+}
+
+// ============================================
+// Video Import Pipeline
+// ============================================
+
+/**
+ * Handle a dropped/selected video: extract audio, transcribe to SRT via
+ * ElevenLabs, then hand off to the existing translation flow.
+ * @param {File} file
+ */
+async function processVideo(file) {
+    if (state.isProcessingVideo || state.isTranslating) {
+        return;
+    }
+
+    // Require an ElevenLabs key for transcription
+    if (!state.elevenLabsKey.trim()) {
+        showToast('Add your ElevenLabs API key to transcribe video.');
+        showElevenLabsModal();
+        return;
+    }
+
+    state.isProcessingVideo = true;
+    state.videoMode = true;
+    state.file = file;
+    state.fileName = file.name;
+    state.fileFormat = 'srt';
+    state.parsedSubtitle = null;
+    state.translatedSubtitle = null;
+
+    // Swap the dropzone for the file info row
+    elements.fileName.textContent = file.name;
+    elements.fileSize.textContent = `${ST.formatFileSize(file.size)} • VIDEO`;
+    elements.dropzone.hidden = true;
+    elements.fileInfo.hidden = false;
+
+    // Reset prior outputs and show the stepper
+    resetUI();
+    hideResumeBanner();
+    resetVideoSteps();
+    showVideoSteps();
+    updateTranslateButton();
+
+    // Fresh log for this run
+    clearLog();
+    showLog();
+    addLogEntry('request', `Importing video: ${file.name}`, ST.formatFileSize(file.size));
+
+    try {
+        // ---- Step 1: Extract audio ----
+        setVideoStep(1, 'active', 'Loading audio engine...', 0);
+        const { blob: audioBlob, ext } = await ST.extractAudio(
+            file,
+            (pct) => setVideoStep(1, 'active', `Extracting... ${pct}%`, pct),
+            (status) => setVideoStep(1, 'active', status)
+        );
+        setVideoStep(1, 'done', `Audio ready (${ST.formatFileSize(audioBlob.size)})`, 100);
+        addLogEntry('response', 'Audio extracted', `Format: ${ext} • ${ST.formatFileSize(audioBlob.size)}`);
+
+        // ---- Step 2: Transcribe with ElevenLabs ----
+        setVideoStep(2, 'active', 'Transcribing with ElevenLabs...', null);
+        startIndeterminate(2);
+        const sttModelValue = elements.sttModel ? elements.sttModel.value : 'scribe_v1';
+        const srtText = await ST.transcribeToSRT(
+            state.elevenLabsKey,
+            audioBlob,
+            { model: sttModelValue, fileName: `audio.${ext}` },
+            (type, message, details) => addLogEntry(type, message, details)
+        );
+        stopIndeterminate(2);
+        setVideoStep(2, 'done', 'Transcript ready', 100);
+
+        // Parse the SRT exactly like an uploaded subtitle file
+        const parsed = ST.parseSubtitle(srtText);
+        if (!parsed.entries.length) {
+            throw new Error('Transcription produced no subtitles.');
+        }
+        state.parsedSubtitle = parsed;
+        state.fileFormat = parsed.format;
+        const base = file.name.replace(/\.[^.]+$/, '');
+        state.fileName = `${base}.${parsed.format}`;
+        elements.fileSize.textContent = `${parsed.entries.length} subtitles • ${parsed.format.toUpperCase()} • from video`;
+
+        showPreview();
+        switchPreviewTab('original');
+        updateTranslateButton();
+
+        // ---- Step 3: Translate (as usual) ----
+        if (state.apiKey.trim()) {
+            setVideoStep(3, 'active', 'Translating...', 0);
+            // startTranslation marks step 3 done/error via the videoMode hooks
+            await startTranslation();
+        } else {
+            setVideoStep(3, 'ready', 'Add your Gemini key, then press Translate', 0);
+            addLogEntry('response', 'Transcript ready to translate', 'Add a Gemini API key and press "Translate Subtitles".');
+            showApiKeyModal();
+        }
+    } catch (err) {
+        console.error('Video processing error:', err);
+        stopIndeterminate(2);
+        const activeStep = document.querySelector('.vstep[data-state="active"]');
+        if (activeStep) {
+            const n = Number(activeStep.id.replace('vstep', ''));
+            setVideoStep(n, 'error', (err && err.message) ? err.message : 'Failed', null);
+        }
+        addLogEntry('error', 'Video processing failed', (err && err.message) ? err.message : String(err));
+        showToast((err && err.message) ? err.message : 'Video processing failed.');
+    } finally {
+        state.isProcessingVideo = false;
+        updateTranslateButton();
+    }
 }
 
 // ============================================
@@ -563,6 +835,11 @@ async function startTranslation(resumeData = null) {
         // Log completion
         addLogEntry('response', `Translation complete!`, `Successfully translated ${stats.totalEntries} subtitles`);
 
+        // Mark the video stepper's final step as done (if this came from a video)
+        if (state.videoMode) {
+            setVideoStep(3, 'done', 'Translation complete', 100);
+        }
+
         // Show results (download first so it sits under Translate and stays visible)
         setTimeout(() => {
             hideProgress();
@@ -576,6 +853,10 @@ async function startTranslation(resumeData = null) {
         addLogEntry('error', 'Translation failed - progress saved', error.message + '\n\nYou can resume from where it stopped.');
         showToast(error.message || 'Translation failed. Progress saved - you can resume.');
         hideProgress();
+
+        if (state.videoMode) {
+            setVideoStep(3, 'error', 'Translation failed - see log', 0);
+        }
 
         // Check if we have saved progress and show resume button
         checkForSavedProgress();
@@ -709,8 +990,9 @@ function switchPreviewTab(tab) {
 // ============================================
 
 function setupEventListeners() {
-    // API Key header button
+    // API Key header buttons
     elements.apiKeyStatus.addEventListener('click', showApiKeyModal);
+    elements.elevenLabsKeyStatus.addEventListener('click', showElevenLabsModal);
 
     // File Upload - Dropzone
     elements.dropzone.addEventListener('click', () => {
@@ -768,6 +1050,20 @@ function setupEventListeners() {
         if (e.target === elements.apiKeyModal) hideApiKeyModal();
     });
 
+    // ElevenLabs Key Modal
+    elements.saveElevenLabsKeyBtn.addEventListener('click', handleSaveElevenLabsKey);
+    elements.skipElevenLabsKeyBtn.addEventListener('click', hideElevenLabsModal);
+    elements.toggleElevenLabsKey.addEventListener('click', () => {
+        const input = elements.modalElevenLabsKey;
+        input.type = input.type === 'password' ? 'text' : 'password';
+    });
+    elements.modalElevenLabsKey.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSaveElevenLabsKey();
+    });
+    elements.elevenLabsModal.addEventListener('click', (e) => {
+        if (e.target === elements.elevenLabsModal) hideElevenLabsModal();
+    });
+
     if (elements.themeToggle) {
         elements.themeToggle.addEventListener('click', toggleTheme);
     }
@@ -793,6 +1089,8 @@ function setupEventListeners() {
         if (e.key === 'Escape') {
             if (elements.apiKeyModal.classList.contains('visible')) {
                 hideApiKeyModal();
+            } else if (elements.elevenLabsModal.classList.contains('visible')) {
+                hideElevenLabsModal();
             } else if (state.isTranslating && state.abortController) {
                 state.abortController.abort();
             }
@@ -807,14 +1105,16 @@ function setupEventListeners() {
 function init() {
     applyTheme(getStoredTheme());
 
-    // Load saved API key
+    // Load saved API keys
     state.apiKey = loadApiKey();
+    state.elevenLabsKey = loadElevenLabsKey();
 
     // Setup event listeners
     setupEventListeners();
 
     // Initial UI state
     updateApiKeyIndicator();
+    updateElevenLabsIndicator();
     updateTranslateButton();
 
     // Show API key modal if no key is saved
