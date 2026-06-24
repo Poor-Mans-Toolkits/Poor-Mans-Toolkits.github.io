@@ -324,6 +324,50 @@ async function translateBatch(apiKey, batch, targetLang, translatedContext = [])
 }
 
 /**
+ * Verify if the translation was actually performed and not just the original text returned
+ * @param {SubtitleEntry[]} originalEntries
+ * @param {SubtitleEntry[]} translatedEntries
+ * @returns {boolean} True if translation seems valid, false if it seems unmodified
+ */
+function verifyTranslation(originalEntries, translatedEntries) {
+    if (!originalEntries || !translatedEntries || originalEntries.length !== translatedEntries.length) {
+        return true; // Let other validation handle length mismatches
+    }
+
+    let unmodifiedCount = 0;
+    let consecutiveUnmodified = 0;
+    let maxConsecutive = 0;
+
+    for (let i = 0; i < originalEntries.length; i++) {
+        if (!translatedEntries[i] || !originalEntries[i]) continue;
+        
+        const origClean = originalEntries[i].text.replace(/[\s\n.,!?'"()\[\]{}\-_=+:;]/g, '').toLowerCase();
+        const transClean = translatedEntries[i].text.replace(/[\s\n.,!?'"()\[\]{}\-_=+:;]/g, '').toLowerCase();
+        
+        // Only check lines that have actual letters/words, ignoring very short ones
+        if (origClean.length > 3 && origClean === transClean) {
+            unmodifiedCount++;
+            consecutiveUnmodified++;
+            if (consecutiveUnmodified > maxConsecutive) {
+                maxConsecutive = consecutiveUnmodified;
+            }
+        } else if (origClean.length > 3) {
+            // Reset consecutive count if it's a substantial line that IS translated
+            consecutiveUnmodified = 0;
+        }
+    }
+
+    const entryRatio = originalEntries.length > 0 ? unmodifiedCount / originalEntries.length : 0;
+    
+    // Fail if more than 35% of entries are identical, or if we have 5+ consecutive identical substantial lines
+    if (entryRatio > 0.35 || maxConsecutive >= 5) {
+        return false;
+    }
+    
+    return true;
+}
+
+/**
  * Translate a batch with exponential backoff retry
  * @param {string} apiKey - Gemini API key
  * @param {Batch} batch - Batch to translate
@@ -350,6 +394,11 @@ async function translateBatchWithRetry(apiKey, batch, targetLang, translatedCont
                 targetLang,
                 translatedContext
             );
+            
+            if (!verifyTranslation(batch.entries, translatedEntries)) {
+                throw new Error('Translation verification failed: AI returned unmodified text');
+            }
+            
             return translatedEntries;
         } catch (error) {
             lastError = error;
@@ -365,7 +414,8 @@ async function translateBatchWithRetry(apiKey, batch, targetLang, translatedCont
                 error.message.includes('504') ||
                 error.message.includes('Empty response') ||
                 error.message.includes('empty candidates') ||
-                error.message.includes('No response from Gemini');
+                error.message.includes('No response from Gemini') ||
+                error.message.includes('Translation verification failed');
 
             if (!isRetryable) {
                 throw error;
