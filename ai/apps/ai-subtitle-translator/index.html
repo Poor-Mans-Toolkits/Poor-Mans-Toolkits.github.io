@@ -187,23 +187,30 @@
                 </div>
                 <div class="card-body">
                     <div class="settings-grid">
-                        <div class="input-group">
+                        <div class="input-group lang-picker-group">
                             <label for="targetLang">Target Language</label>
-                            <select id="targetLang">
-                                <option value="persian">Persian (فارسی)</option>
-                                <option value="arabic">Arabic (العربية)</option>
-                                <option value="spanish">Spanish (Español)</option>
-                                <option value="french">French (Français)</option>
-                                <option value="german">German (Deutsch)</option>
-                                <option value="italian">Italian (Italiano)</option>
-                                <option value="portuguese">Portuguese (Português)</option>
-                                <option value="russian">Russian (Русский)</option>
-                                <option value="chinese">Chinese (中文)</option>
-                                <option value="japanese">Japanese (日本語)</option>
-                                <option value="korean">Korean (한국어)</option>
-                                <option value="turkish">Turkish (Türkçe)</option>
-                                <option value="hindi">Hindi (हिन्दी)</option>
-                            </select>
+                            <!-- Hidden input stores the actual value for form compatibility -->
+                            <input type="hidden" id="targetLang" value="persian">
+                            <div class="lang-picker" id="langPicker">
+                                <button type="button" class="lang-picker-trigger" id="langPickerTrigger">
+                                    <span class="lang-picker-value" id="langPickerValue">Persian (فارسی)</span>
+                                    <svg class="lang-picker-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </button>
+                                <div class="lang-picker-dropdown" id="langPickerDropdown">
+                                    <div class="lang-picker-search-wrap">
+                                        <svg class="lang-picker-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="11" cy="11" r="8"></circle>
+                                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                        </svg>
+                                        <input type="text" class="lang-picker-search" id="langPickerSearch" placeholder="Search languages..." autocomplete="off" spellcheck="false">
+                                    </div>
+                                    <div class="lang-picker-list" id="langPickerList">
+                                        <!-- Populated by JS -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="input-group">
                             <label for="batchSize">Batch Size</label>

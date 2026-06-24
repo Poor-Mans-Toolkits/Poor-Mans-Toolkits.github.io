@@ -483,6 +483,285 @@ select option:disabled {
     text-decoration: underline;
 }
 
+/* ========================================
+   Language Picker – Custom Searchable Dropdown
+   ======================================== */
+
+.lang-picker-group {
+    position: relative;
+}
+
+.lang-picker {
+    position: relative;
+    width: 100%;
+}
+
+.lang-picker-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.45rem 0;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--fg);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--border);
+    outline: none;
+    cursor: pointer;
+    transition: border-color var(--transition);
+    text-align: left;
+}
+
+.lang-picker-trigger:hover {
+    border-bottom-color: var(--muted-fg);
+}
+
+.lang-picker-trigger:focus {
+    border-bottom-color: var(--accent);
+}
+
+.lang-picker-chevron {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--muted-fg);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lang-picker.open .lang-picker-chevron {
+    transform: rotate(180deg);
+}
+
+.lang-picker-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Dropdown Panel */
+.lang-picker-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 100%;
+    min-width: 260px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition:
+        opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.2s;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.lang-picker.open .lang-picker-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Search */
+.lang-picker-search-wrap {
+    position: relative;
+    padding: 0.55rem 0.65rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.lang-picker-search-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--muted-fg);
+    pointer-events: none;
+}
+
+.lang-picker-search {
+    width: 100%;
+    padding: 0.5rem 0.5rem 0.5rem 2rem;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--fg);
+    background: var(--muted);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color var(--transition), background var(--transition);
+}
+
+.lang-picker-search::placeholder {
+    color: var(--muted-fg);
+}
+
+.lang-picker-search:focus {
+    border-color: var(--accent);
+    background: transparent;
+}
+
+/* List */
+.lang-picker-list {
+    max-height: 260px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.35rem 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+.lang-picker-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.lang-picker-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.lang-picker-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+/* Section Labels */
+.lang-picker-section {
+    padding: 0.35rem 0.85rem 0.2rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--muted-fg);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    user-select: none;
+}
+
+/* Items */
+.lang-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.925rem;
+    font-weight: 500;
+    color: var(--fg);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+    user-select: none;
+}
+
+.lang-picker-item:hover {
+    background: var(--muted);
+}
+
+.lang-picker-item.active {
+    color: var(--accent);
+}
+
+.lang-picker-item.active::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 18px;
+    background: var(--accent);
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-left: -0.35rem;
+}
+
+.lang-picker-item.focused {
+    background: var(--muted);
+    outline: 1px solid var(--border);
+    outline-offset: -1px;
+}
+
+.lang-picker-item .lang-native {
+    color: var(--muted-fg);
+    font-size: 0.85rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.lang-picker-item .lang-recent-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(223, 225, 4, 0.1);
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.lang-picker-empty {
+    padding: 1.2rem 0.85rem;
+    font-size: 0.9rem;
+    color: var(--muted-fg);
+    text-align: center;
+}
+
+.lang-picker-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0.25rem 0.65rem;
+}
+
+/* Disabled state */
+.lang-picker.disabled .lang-picker-trigger {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* ---- Light theme overrides ---- */
+[data-theme="light"] .lang-picker-trigger {
+    border: 2px solid var(--border);
+    border-radius: var(--radius-control);
+    padding: 0.5rem 0.65rem;
+    background: #fff;
+    font-size: 1.05rem;
+}
+
+[data-theme="light"] .lang-picker-trigger:focus {
+    border-color: var(--secondary-accent);
+    box-shadow: 0 0 0 3px rgba(45, 93, 161, 0.22);
+}
+
+[data-theme="light"] .lang-picker-dropdown {
+    background: #fff;
+    border-radius: var(--radius-control);
+    border-color: var(--border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .lang-picker-search {
+    background: #f4f4f5;
+    border-radius: var(--radius-control);
+}
+
+[data-theme="light"] .lang-picker-search:focus {
+    border-color: var(--secondary-accent);
+    background: #fff;
+}
+
+[data-theme="light"] .lang-picker-item:hover {
+    background: #f4f4f5;
+}
+
+[data-theme="light"] .lang-picker-item .lang-recent-badge {
+    background: rgba(45, 93, 161, 0.08);
+    color: var(--secondary-accent);
+}
+
 /* Settings Grid */
 .settings-grid {
     display: grid;

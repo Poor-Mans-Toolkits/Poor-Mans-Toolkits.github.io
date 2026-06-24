@@ -46,6 +46,14 @@ const elements = {
     modelSelect: document.getElementById('modelSelect'),
     sttModel: document.getElementById('sttModel'),
 
+    // Language Picker
+    langPicker: document.getElementById('langPicker'),
+    langPickerTrigger: document.getElementById('langPickerTrigger'),
+    langPickerValue: document.getElementById('langPickerValue'),
+    langPickerDropdown: document.getElementById('langPickerDropdown'),
+    langPickerSearch: document.getElementById('langPickerSearch'),
+    langPickerList: document.getElementById('langPickerList'),
+
     // Video Processing stepper
     videoStepsCard: document.getElementById('videoStepsCard'),
 
@@ -313,7 +321,10 @@ function setTranslating(translating) {
     updateTranslateButton();
 
     // Disable/enable inputs during translation
-    elements.targetLang.disabled = translating;
+    elements.langPicker.classList.toggle('disabled', translating);
+    if (translating && elements.langPicker.classList.contains('open')) {
+        closeLangPicker();
+    }
     elements.batchSize.disabled = translating;
     elements.modelSelect.disabled = translating;
     if (elements.sttModel) elements.sttModel.disabled = translating;
@@ -775,7 +786,7 @@ async function startTranslation(resumeData = null) {
             `${completedEntries} subtitles already translated\n${stats.totalEntries - completedEntries} remaining\nModel: ${selectedModel}`);
     } else {
         addLogEntry('request', `Starting translation: ${stats.totalEntries} subtitles in ${stats.totalBatches} batches`,
-            `Target language: ${elements.targetLang.options[elements.targetLang.selectedIndex].text}\nBatch size: ${batchSize}\nModel: ${selectedModel}`);
+            `Target language: ${elements.langPickerValue.textContent}\nBatch size: ${batchSize}\nModel: ${selectedModel}`);
     }
 
     try {
@@ -1122,8 +1133,326 @@ function init() {
         showApiKeyModal();
     }
 
+    // Initialize language picker
+    initLangPicker();
+
     console.log('SubTranslator initialized');
 }
 
 // Start the app
 init();
+
+// ============================================
+// Language Picker
+// ============================================
+
+const ALL_LANGUAGES = [
+    { value: 'afrikaans',    label: 'Afrikaans',    native: 'Afrikaans' },
+    { value: 'albanian',     label: 'Albanian',     native: 'Shqip' },
+    { value: 'amharic',      label: 'Amharic',      native: 'አማርኛ' },
+    { value: 'arabic',       label: 'Arabic',       native: 'العربية' },
+    { value: 'armenian',     label: 'Armenian',     native: 'Հայերեն' },
+    { value: 'assamese',     label: 'Assamese',     native: 'অসমীয়া' },
+    { value: 'azerbaijani',  label: 'Azerbaijani',  native: 'Azərbaycanca' },
+    { value: 'basque',       label: 'Basque',       native: 'Euskara' },
+    { value: 'belarusian',   label: 'Belarusian',   native: 'Беларуская' },
+    { value: 'bengali',      label: 'Bengali',      native: 'বাংলা' },
+    { value: 'bosnian',      label: 'Bosnian',      native: 'Bosanski' },
+    { value: 'bulgarian',    label: 'Bulgarian',    native: 'Български' },
+    { value: 'burmese',      label: 'Burmese',      native: 'မြန်မာ' },
+    { value: 'catalan',      label: 'Catalan',      native: 'Català' },
+    { value: 'cebuano',      label: 'Cebuano',      native: 'Cebuano' },
+    { value: 'chinese',      label: 'Chinese (Simplified)', native: '简体中文' },
+    { value: 'chinese_traditional', label: 'Chinese (Traditional)', native: '繁體中文' },
+    { value: 'corsican',     label: 'Corsican',     native: 'Corsu' },
+    { value: 'croatian',     label: 'Croatian',     native: 'Hrvatski' },
+    { value: 'czech',        label: 'Czech',        native: 'Čeština' },
+    { value: 'danish',       label: 'Danish',       native: 'Dansk' },
+    { value: 'dutch',        label: 'Dutch',        native: 'Nederlands' },
+    { value: 'esperanto',    label: 'Esperanto',    native: 'Esperanto' },
+    { value: 'estonian',     label: 'Estonian',     native: 'Eesti' },
+    { value: 'filipino',     label: 'Filipino',     native: 'Tagalog' },
+    { value: 'finnish',      label: 'Finnish',      native: 'Suomi' },
+    { value: 'french',       label: 'French',       native: 'Français' },
+    { value: 'galician',     label: 'Galician',     native: 'Galego' },
+    { value: 'georgian',     label: 'Georgian',     native: 'ქართული' },
+    { value: 'german',       label: 'German',       native: 'Deutsch' },
+    { value: 'greek',        label: 'Greek',        native: 'Ελληνικά' },
+    { value: 'gujarati',     label: 'Gujarati',     native: 'ગુજરાતી' },
+    { value: 'haitian_creole', label: 'Haitian Creole', native: 'Kreyòl Ayisyen' },
+    { value: 'hausa',        label: 'Hausa',        native: 'Hausa' },
+    { value: 'hawaiian',     label: 'Hawaiian',     native: 'ʻŌlelo Hawaiʻi' },
+    { value: 'hebrew',       label: 'Hebrew',       native: 'עברית' },
+    { value: 'hindi',        label: 'Hindi',        native: 'हिन्दी' },
+    { value: 'hmong',        label: 'Hmong',        native: 'Hmoob' },
+    { value: 'hungarian',    label: 'Hungarian',    native: 'Magyar' },
+    { value: 'icelandic',    label: 'Icelandic',    native: 'Íslenska' },
+    { value: 'igbo',         label: 'Igbo',         native: 'Igbo' },
+    { value: 'indonesian',   label: 'Indonesian',   native: 'Bahasa Indonesia' },
+    { value: 'irish',        label: 'Irish',        native: 'Gaeilge' },
+    { value: 'italian',      label: 'Italian',      native: 'Italiano' },
+    { value: 'japanese',     label: 'Japanese',     native: '日本語' },
+    { value: 'javanese',     label: 'Javanese',     native: 'Basa Jawa' },
+    { value: 'kannada',      label: 'Kannada',      native: 'ಕನ್ನಡ' },
+    { value: 'kazakh',       label: 'Kazakh',       native: 'Қазақ' },
+    { value: 'khmer',        label: 'Khmer',        native: 'ខ្មែរ' },
+    { value: 'kinyarwanda',  label: 'Kinyarwanda',  native: 'Ikinyarwanda' },
+    { value: 'korean',       label: 'Korean',       native: '한국어' },
+    { value: 'kurdish',      label: 'Kurdish',      native: 'Kurdî' },
+    { value: 'kyrgyz',       label: 'Kyrgyz',       native: 'Кыргызча' },
+    { value: 'lao',          label: 'Lao',          native: 'ລາວ' },
+    { value: 'latin',        label: 'Latin',        native: 'Latina' },
+    { value: 'latvian',      label: 'Latvian',      native: 'Latviešu' },
+    { value: 'lithuanian',   label: 'Lithuanian',   native: 'Lietuvių' },
+    { value: 'luxembourgish', label: 'Luxembourgish', native: 'Lëtzebuergesch' },
+    { value: 'macedonian',   label: 'Macedonian',   native: 'Македонски' },
+    { value: 'malagasy',     label: 'Malagasy',     native: 'Malagasy' },
+    { value: 'malay',        label: 'Malay',        native: 'Bahasa Melayu' },
+    { value: 'malayalam',    label: 'Malayalam',     native: 'മലയാളം' },
+    { value: 'maltese',      label: 'Maltese',      native: 'Malti' },
+    { value: 'maori',        label: 'Maori',        native: 'Te Reo Māori' },
+    { value: 'marathi',      label: 'Marathi',      native: 'मराठी' },
+    { value: 'mongolian',    label: 'Mongolian',    native: 'Монгол' },
+    { value: 'nepali',       label: 'Nepali',       native: 'नेपाली' },
+    { value: 'norwegian',    label: 'Norwegian',    native: 'Norsk' },
+    { value: 'odia',         label: 'Odia',         native: 'ଓଡ଼ିଆ' },
+    { value: 'pashto',       label: 'Pashto',       native: 'پښتو' },
+    { value: 'persian',      label: 'Persian',      native: 'فارسی' },
+    { value: 'polish',       label: 'Polish',       native: 'Polski' },
+    { value: 'portuguese',   label: 'Portuguese',   native: 'Português' },
+    { value: 'punjabi',      label: 'Punjabi',      native: 'ਪੰਜਾਬੀ' },
+    { value: 'romanian',     label: 'Romanian',     native: 'Română' },
+    { value: 'russian',      label: 'Russian',      native: 'Русский' },
+    { value: 'samoan',       label: 'Samoan',       native: 'Gagana Sāmoa' },
+    { value: 'scots_gaelic',  label: 'Scots Gaelic', native: 'Gàidhlig' },
+    { value: 'serbian',      label: 'Serbian',      native: 'Српски' },
+    { value: 'sesotho',      label: 'Sesotho',      native: 'Sesotho' },
+    { value: 'shona',        label: 'Shona',        native: 'ChiShona' },
+    { value: 'sindhi',       label: 'Sindhi',       native: 'سنڌي' },
+    { value: 'sinhala',      label: 'Sinhala',      native: 'සිංහල' },
+    { value: 'slovak',       label: 'Slovak',       native: 'Slovenčina' },
+    { value: 'slovenian',    label: 'Slovenian',    native: 'Slovenščina' },
+    { value: 'somali',       label: 'Somali',       native: 'Soomaali' },
+    { value: 'spanish',      label: 'Spanish',      native: 'Español' },
+    { value: 'sundanese',    label: 'Sundanese',    native: 'Basa Sunda' },
+    { value: 'swahili',      label: 'Swahili',      native: 'Kiswahili' },
+    { value: 'swedish',      label: 'Swedish',      native: 'Svenska' },
+    { value: 'tajik',        label: 'Tajik',        native: 'Тоҷикӣ' },
+    { value: 'tamil',        label: 'Tamil',        native: 'தமிழ்' },
+    { value: 'tatar',        label: 'Tatar',        native: 'Татар' },
+    { value: 'telugu',       label: 'Telugu',       native: 'తెలుగు' },
+    { value: 'thai',         label: 'Thai',         native: 'ไทย' },
+    { value: 'turkish',      label: 'Turkish',      native: 'Türkçe' },
+    { value: 'turkmen',      label: 'Turkmen',      native: 'Türkmen' },
+    { value: 'ukrainian',    label: 'Ukrainian',    native: 'Українська' },
+    { value: 'urdu',         label: 'Urdu',         native: 'اردو' },
+    { value: 'uyghur',       label: 'Uyghur',       native: 'ئۇيغۇرچە' },
+    { value: 'uzbek',        label: 'Uzbek',        native: 'Oʻzbek' },
+    { value: 'vietnamese',   label: 'Vietnamese',   native: 'Tiếng Việt' },
+    { value: 'welsh',        label: 'Welsh',        native: 'Cymraeg' },
+    { value: 'xhosa',        label: 'Xhosa',       native: 'isiXhosa' },
+    { value: 'yiddish',      label: 'Yiddish',      native: 'ייִדיש' },
+    { value: 'yoruba',       label: 'Yoruba',       native: 'Yorùbá' },
+    { value: 'zulu',         label: 'Zulu',         native: 'isiZulu' },
+];
+
+const RECENT_LANGS_KEY = 'st_recent_langs';
+const MAX_RECENT = 5;
+
+function getRecentLangs() {
+    try {
+        return JSON.parse(localStorage.getItem(RECENT_LANGS_KEY)) || [];
+    } catch { return []; }
+}
+
+function pushRecentLang(value) {
+    let recent = getRecentLangs().filter(v => v !== value);
+    recent.unshift(value);
+    if (recent.length > MAX_RECENT) recent = recent.slice(0, MAX_RECENT);
+    localStorage.setItem(RECENT_LANGS_KEY, JSON.stringify(recent));
+}
+
+function getLangDisplay(lang) {
+    return `${lang.label} (${lang.native})`;
+}
+
+function openLangPicker() {
+    elements.langPicker.classList.add('open');
+    elements.langPickerSearch.value = '';
+    renderLangList('');
+    // Focus search after animation
+    requestAnimationFrame(() => elements.langPickerSearch.focus());
+}
+
+function closeLangPicker() {
+    elements.langPicker.classList.remove('open');
+    _langFocusIdx = -1;
+}
+
+let _langFocusIdx = -1;
+
+function renderLangList(query) {
+    const list = elements.langPickerList;
+    const current = elements.targetLang.value;
+    const recent = getRecentLangs();
+    const q = query.trim().toLowerCase();
+
+    // Filter languages
+    const filtered = ALL_LANGUAGES.filter(lang =>
+        !q ||
+        lang.label.toLowerCase().includes(q) ||
+        lang.native.toLowerCase().includes(q) ||
+        lang.value.toLowerCase().includes(q)
+    );
+
+    // Split into recent and others
+    const recentLangs = [];
+    const otherLangs = [];
+    for (const lang of filtered) {
+        if (recent.includes(lang.value)) {
+            recentLangs.push(lang);
+        } else {
+            otherLangs.push(lang);
+        }
+    }
+    // Sort recent by recency order
+    recentLangs.sort((a, b) => recent.indexOf(a.value) - recent.indexOf(b.value));
+
+    list.innerHTML = '';
+    _langFocusIdx = -1;
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="lang-picker-empty">No languages found</div>';
+        return;
+    }
+
+    if (recentLangs.length > 0) {
+        const sectionEl = document.createElement('div');
+        sectionEl.className = 'lang-picker-section';
+        sectionEl.textContent = 'Recent';
+        list.appendChild(sectionEl);
+
+        for (const lang of recentLangs) {
+            list.appendChild(createLangItem(lang, current, true));
+        }
+
+        if (otherLangs.length > 0) {
+            const divider = document.createElement('div');
+            divider.className = 'lang-picker-divider';
+            list.appendChild(divider);
+        }
+    }
+
+    if (otherLangs.length > 0) {
+        if (recentLangs.length > 0) {
+            const sectionEl = document.createElement('div');
+            sectionEl.className = 'lang-picker-section';
+            sectionEl.textContent = 'All Languages';
+            list.appendChild(sectionEl);
+        }
+
+        for (const lang of otherLangs) {
+            list.appendChild(createLangItem(lang, current, false));
+        }
+    }
+}
+
+function createLangItem(lang, currentValue, isRecent) {
+    const item = document.createElement('div');
+    item.className = 'lang-picker-item';
+    if (lang.value === currentValue) item.classList.add('active');
+    item.dataset.value = lang.value;
+
+    let inner = `<span class="lang-label">${lang.label}</span>`;
+    if (isRecent) {
+        inner += `<span class="lang-recent-badge">recent</span>`;
+    }
+    inner += `<span class="lang-native">${lang.native}</span>`;
+    item.innerHTML = inner;
+
+    item.addEventListener('click', () => selectLang(lang));
+    return item;
+}
+
+function selectLang(lang) {
+    elements.targetLang.value = lang.value;
+    elements.langPickerValue.textContent = getLangDisplay(lang);
+    pushRecentLang(lang.value);
+    closeLangPicker();
+}
+
+function getVisibleItems() {
+    return Array.from(elements.langPickerList.querySelectorAll('.lang-picker-item'));
+}
+
+function setFocusedItem(idx) {
+    const items = getVisibleItems();
+    items.forEach(el => el.classList.remove('focused'));
+    if (idx >= 0 && idx < items.length) {
+        items[idx].classList.add('focused');
+        items[idx].scrollIntoView({ block: 'nearest' });
+    }
+    _langFocusIdx = idx;
+}
+
+function initLangPicker() {
+    // Restore saved language from recent
+    const recent = getRecentLangs();
+    if (recent.length > 0) {
+        const savedLang = ALL_LANGUAGES.find(l => l.value === recent[0]);
+        if (savedLang) {
+            elements.targetLang.value = savedLang.value;
+            elements.langPickerValue.textContent = getLangDisplay(savedLang);
+        }
+    }
+
+    // Toggle dropdown
+    elements.langPickerTrigger.addEventListener('click', () => {
+        if (elements.langPicker.classList.contains('disabled')) return;
+        if (elements.langPicker.classList.contains('open')) {
+            closeLangPicker();
+        } else {
+            openLangPicker();
+        }
+    });
+
+    // Search filtering
+    elements.langPickerSearch.addEventListener('input', (e) => {
+        renderLangList(e.target.value);
+    });
+
+    // Keyboard navigation inside search
+    elements.langPickerSearch.addEventListener('keydown', (e) => {
+        const items = getVisibleItems();
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setFocusedItem(Math.min(_langFocusIdx + 1, items.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setFocusedItem(Math.max(_langFocusIdx - 1, 0));
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (_langFocusIdx >= 0 && _langFocusIdx < items.length) {
+                items[_langFocusIdx].click();
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeLangPicker();
+            elements.langPickerTrigger.focus();
+        }
+    });
+
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (!elements.langPicker.contains(e.target)) {
+            closeLangPicker();
+        }
+    });
+
+    // Close on Escape (global, extend existing handler)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && elements.langPicker.classList.contains('open')) {
+            closeLangPicker();
+        }
+    });
+}
